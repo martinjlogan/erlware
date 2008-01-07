@@ -32,6 +32,7 @@
 %% Include files
 %%--------------------------------------------------------------------
 -include("eunit.hrl").
+-include("ewrepo.hrl").
 
 %%--------------------------------------------------------------------
 %% External exports
@@ -51,6 +52,9 @@
 	 dot_rel_file_suffix/3
         ]).
 
+-export([
+	 decompose_suffix/1
+        ]).
 %%====================================================================
 %% External functions
 %%====================================================================
@@ -144,7 +148,85 @@ dot_rel_file_suffix(ErtsVsn, ReleaseName, ReleaseVsn) when is_list(ReleaseVsn) -
     lists:flatten([package_vsn_suffix(ErtsVsn, "Meta", "releases", ReleaseName, ReleaseVsn), "/", ReleaseName, ".rel"]).
 
 %%====================================================================
-%% Internal functions
+%% Other External Functions
+%%====================================================================
+
+%%--------------------------------------------------------------------
+%% @doc Returns the suffix pointing to the .rel file to be stored in the repo.
+%% @spec decompose_suffix(Suffix) -> {ok, [Segment]} | {error, Reason}
+%% where
+%%  Segment = {Type, SegmentText}
+%%   Type = erts_vsn | area | side | package_name | package_vsn | package
+%% @end
+%%--------------------------------------------------------------------
+decompose_suffix(Suffix) ->
+    Tokens = string:tokens(Suffix, "/"),
+    try 
+	analyse_tokens(Tokens)
+    catch 
+	_Class:Exception ->
+	    Exception
+    end.
+	
+%%====================================================================
+%% Internal Functions
+%%====================================================================
+
+analyse_tokens([ErtsVsn|T]) ->
+    case regexp:match(ErtsVsn, "^[0-9]+\.[0-9]+\.[0-9]+") of
+	{match, 1, Length} when length(ErtsVsn) == Length ->
+	    [{erts_vsn, ErtsVsn}|area(T)];
+	_Error ->
+	    throw({error, {bad_erts_vsn, ErtsVsn}})
+    end.
+
+area([]) ->	    
+    [];
+area(["Meta"|T]) ->	    
+    [{area, "Meta"}|package_name(T)];
+area([Area|T]) ->	    
+    [{area, Area}|side(T)].
+
+side([]) ->	    
+    [];
+side([Side|T]) when Side == "lib"; Side == "releases" ->
+    [{side, Side}|package_name(T)];
+side([Side|_]) ->
+    throw({error, {bad_side, Side}}).
+
+package_name([]) ->
+    [];
+package_name([PackageName|T]) ->
+    case regexp:match(PackageName, "^" ++ ?PACKAGE_NAME_REGEXP) of
+	{match, 1, Length} when length(PackageName) == Length ->
+	    [{package_name, PackageName}|package_vsn(T)];
+	_Error ->
+	    throw({error, {bad_package_name, PackageName}})
+    end.
+    
+package_vsn([]) ->
+    [];
+package_vsn([PackageVsn|T]) ->
+    case regexp:match(PackageVsn, "^" ++ ?PACKAGE_VSN_REGEXP) of
+	{match, 1, Length} when length(PackageVsn) == Length ->
+	    [{package_vsn, PackageVsn}|package(T)];
+	_Error ->
+	    throw({error, {bad_package_vsn, PackageVsn}})
+    end.
+
+package([]) ->
+    [];
+package([Package]) ->
+    case regexp:match(Package, ?PACKAGE_EXT_REGEXP) of
+	{match, _, _} ->
+	    [{package, Package}];
+	_Error ->
+	    throw({error, {bad_package, Package}})
+    end.
+    
+    
+%%====================================================================
+%% Test Functions
 %%====================================================================
 
 dot_rel_file_suffix_test() ->
@@ -155,3 +237,24 @@ erts_package_suffix_test() ->
 
 package_vsn_suffix_test() ->
     ?assertMatch("/5.5.5/Generic/lib/mnesia/1.0", package_vsn_suffix("5.5.5", "Generic", "lib", "mnesia", "1.0")).
+
+decompose_suffix_test() ->
+    ?assertMatch({error, {bad_erts_vsn, "5.5"}}, 
+		 decompose_suffix("5.5/Generic/lib/gas/5.1.0/gas.tar.z")),
+
+    ?assertMatch({error, {bad_package, "gas.tar.z"}}, 
+		 decompose_suffix("5.5.5/Generic/lib/gas/5.1.0/gas.tar.z")),
+
+    ?assertMatch([{erts_vsn, "5.5.5"}, {area, "Generic"}, {side, "lib"}],
+		  decompose_suffix("5.5.5/Generic/lib")),
+
+    ?assertMatch([{erts_vsn, "5.5.5"}, {area, "Generic"},
+		  {side, "lib"}, {package_name, "gas"},
+		  {package_vsn, "5.1.0"}, {package, "gas.tar.gz"}], 
+		  decompose_suffix("5.5.5/Generic/lib/gas/5.1.0/gas.tar.gz")),
+
+    ?assertMatch([{erts_vsn, "5.5.5"}, {area, "Generic"},
+		  {side, "lib"}, {package_name, "gas"},
+		  {package_vsn, "5.1-alpha"}, {package, "gas.tar.gz"}], 
+		  decompose_suffix("5.5.5/Generic/lib/gas/5.1-alpha/gas.tar.gz")).
+    
