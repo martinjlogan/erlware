@@ -209,7 +209,7 @@ package_vsn([]) ->
 package_vsn([PackageVsn|T]) ->
     case regexp:match(PackageVsn, "^" ++ ?PACKAGE_VSN_REGEXP) of
 	{match, 1, Length} when length(PackageVsn) == Length ->
-	    [{package_vsn, PackageVsn}|package(T)];
+	    [{package_vsn, PackageVsn}|file(T)];
 	_Error ->
 	    throw({error, {bad_package_vsn, PackageVsn}})
     end.
@@ -242,7 +242,7 @@ decompose_suffix_test() ->
     ?assertMatch({error, {bad_erts_vsn, "5.5"}}, 
 		 decompose_suffix("5.5/Generic/lib/gas/5.1.0/gas.tar.z")),
 
-    ?assertMatch({error, {bad_package, "gas.tar.z"}}, 
+    ?assertMatch({error, {bad_file, "gas.tar.z"}}, 
 		 decompose_suffix("5.5.5/Generic/lib/gas/5.1.0/gas.tar.z")),
 
     ?assertMatch([{erts_vsn, "5.5.5"}, {area, "Generic"}, {side, "lib"}],
@@ -250,11 +250,11 @@ decompose_suffix_test() ->
 
     ?assertMatch([{erts_vsn, "5.5.5"}, {area, "Generic"},
 		  {side, "lib"}, {package_name, "gas"},
-		  {package_vsn, "5.1.0"}, {package, "gas.tar.gz"}], 
+		  {package_vsn, "5.1.0"}, {file, "gas.tar.gz"}], 
 		  decompose_suffix("5.5.5/Generic/lib/gas/5.1.0/gas.tar.gz")),
 
     ?assertMatch([{erts_vsn, "5.5.5"}, {area, "Generic"},
 		  {side, "lib"}, {package_name, "gas"},
-		  {package_vsn, "5.1-alpha"}, {package, "gas.tar.gz"}], 
+		  {package_vsn, "5.1-alpha"}, {file, "gas.tar.gz"}], 
 		  decompose_suffix("5.5.5/Generic/lib/gas/5.1-alpha/gas.tar.gz")).
     
