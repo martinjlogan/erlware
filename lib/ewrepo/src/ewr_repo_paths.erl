@@ -156,7 +156,7 @@ dot_rel_file_suffix(ErtsVsn, ReleaseName, ReleaseVsn) when is_list(ReleaseVsn) -
 %% @spec decompose_suffix(Suffix) -> {ok, [Segment]} | {error, Reason}
 %% where
 %%  Segment = {Type, SegmentText}
-%%   Type = erts_vsn | area | side | package_name | package_vsn | package
+%%   Type = erts_vsn | area | side | package_name | package_vsn | file
 %% @end
 %%--------------------------------------------------------------------
 decompose_suffix(Suffix) ->
@@ -214,14 +214,14 @@ package_vsn([PackageVsn|T]) ->
 	    throw({error, {bad_package_vsn, PackageVsn}})
     end.
 
-package([]) ->
+file([]) ->
     [];
-package([Package]) ->
-    case regexp:match(Package, ?PACKAGE_EXT_REGEXP) of
+file([File]) ->
+    case regexp:match(File, ?REPO_FILE_EXT_REGEXP) of
 	{match, _, _} ->
-	    [{package, Package}];
+	    [{file, File}];
 	_Error ->
-	    throw({error, {bad_package, Package}})
+	    throw({error, {bad_file, File}})
     end.
     
     
