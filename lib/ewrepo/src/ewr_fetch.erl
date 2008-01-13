@@ -274,7 +274,7 @@ fetch_erts_package(Repos, Version, To, Timeout) ->
             filelib:ensure_dir(filename:join([To, "tmp"])),
 	    SysInfo = ewr_util:system_info(),
             fetch_from_repos(Repos, [filename:dirname(ewr_repo_paths:erts_package_suffix(Version, SysInfo))], 
-			     "erts.tar.gz", To, Timeout);
+			     "/erts.tar.gz", To, Timeout);
         true ->
             ok
     end.
