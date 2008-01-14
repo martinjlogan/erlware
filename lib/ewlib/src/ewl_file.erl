@@ -86,7 +86,8 @@ delete_dir(Path) ->
 copy_dir(From, To) ->
     case filelib:is_dir(From) of
 	false ->
-	    {ok, _} = file:copy(From, To);
+	    {ok, _} = file:copy(From, To),
+	    ok;
 	true ->
 	    case filelib:is_dir(To) of
 		true  -> ok;
