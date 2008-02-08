@@ -206,7 +206,7 @@ join_paths(Path1, Path2) ->
 %% @end
 %%--------------------------------------------------------------------
 gsub_file(FilePath, RegExp, New) ->
-    {ok, BinaryContents} =file:read_file("FilePath"),
+    {ok, BinaryContents} =file:read_file(FilePath),
     Contents = binary_to_list(BinaryContents),
     case regexp:gsub(Contents, RegExp, New) of
 	{ok, NewContents, RepCount} -> 
