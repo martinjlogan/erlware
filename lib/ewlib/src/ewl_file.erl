@@ -41,7 +41,8 @@
 	 create_tmp_dir/1,
 	 mkdir_p/1,
 	 compress/2,
-	 uncompress/1
+	 uncompress/1,
+	 gsub_file/3
         ]).
 
 %%--------------------------------------------------------------------
@@ -197,6 +198,24 @@ find(FromDir, TargetPattern) ->
 %%--------------------------------------------------------------------
 join_paths(Path1, Path2) ->
     remove_trailing_slash(lists:flatten([remove_trailing_slash(Path1), ensure_leading_slash(Path2)])).
+
+
+%%--------------------------------------------------------------------
+%% @doc alter the contents of a file with regexp:gsub.
+%% @spec gsub_file(FilePath, RegExp, New) -> {ok, RepCount} | {error, Reason}
+%% @end
+%%--------------------------------------------------------------------
+gsub_file(FilePath, RegExp, New) ->
+    {ok, BinaryContents} =file:read_file("FilePath"),
+    Contents = binary_to_list(BinaryContents),
+    case regexp:gsub(Contents, RegExp, New) of
+	{ok, NewContents, RepCount} -> 
+	    {ok, IOD} = file:open(FilePath, [write]),
+	    ok = io:fwrite(IOD, "~s", [NewContents]),
+	    {ok, RepCount};
+	Error ->
+	    Error
+    end.
 
 %%%====================================================================
 %%% Internal functions
