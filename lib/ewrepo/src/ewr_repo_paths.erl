@@ -17,10 +17,7 @@
 %%%          ErtsVsn/Area/Side/PackageName/PackageVsn/File
 %%% </pre>
 %%%
-%%%  @type area() = "Generic" | "Meta" | Architecture
-%%%  where
-%%%   Architecture = string()
-%%%    Side = "lib" | "releases"
+%%%  @type area() = string() | Generic | Meta 
 %%%
 %%% @end
 %%%
