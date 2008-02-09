@@ -19,6 +19,7 @@
 -export([
          n_tokens/3, 
          separate_by_token/2,
+         separate_by_token/3,
          is_string/1 
         ]).
 
