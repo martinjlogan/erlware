@@ -15,12 +15,9 @@
 %%%          /5.5.5/Generic/lib/mnesia/2.3/mnesia.tar.tz 
 %%%          /5.5.5/Meta/release/sinan/1.0/sinan.rel
 %%%          ErtsVsn/Area/Side/PackageName/PackageVsn/File
-%%%
-%%% Types:
-%%%  Area = "Generic" | "Meta" | Architecture
-%%%   Architecture = string()
-%%%  Side = "lib" | "releases"
 %%% </pre>
+%%%
+%%%  @type area() = string() | Generic | Meta 
 %%%
 %%% @end
 %%%
@@ -49,7 +46,8 @@
 	 package_suffix/5,
 	 erts_package_suffix/2,
 	 dot_app_file_suffix/3,
-	 dot_rel_file_suffix/3
+	 dot_rel_file_suffix/3,
+	 release_control_file_suffix/3
         ]).
 
 -export([
@@ -85,7 +83,7 @@ area_suffix(ErtsVsn, Area) when is_list(Area) ->
 %% @end 
 %%--------------------------------------------------------------------
 %% TODO This first clause will be removed when Meta area gets Sides. This will happen after the new Sinan 0.9.0.0 is tested stable.
-side_suffix(ErtsVsn, "Meta" = Area, Side) when Side == "lib"; Side == "releases" ->
+side_suffix(ErtsVsn, "Meta" = Area, Side) when Side == "lib" ->
     area_suffix(ErtsVsn, Area);
 side_suffix(ErtsVsn, Area, Side) when Side == "lib"; Side == "releases" ->
     ewl_file:join_paths(area_suffix(ErtsVsn, Area), Side).
@@ -146,6 +144,14 @@ dot_app_file_suffix(ErtsVsn, AppName, AppVsn) when is_list(AppVsn) ->
 %%--------------------------------------------------------------------
 dot_rel_file_suffix(ErtsVsn, ReleaseName, ReleaseVsn) when is_list(ReleaseVsn) ->
     lists:flatten([package_vsn_suffix(ErtsVsn, "Meta", "releases", ReleaseName, ReleaseVsn), "/", ReleaseName, ".rel"]).
+
+%%--------------------------------------------------------------------
+%% @doc Returns the suffix pointing to the control file to be stored in the repo.
+%% @spec release_control_file_suffix(ErtsVsn::string(), ReleaseName::string(), ReleaseVsn::string()) -> string()
+%% @end 
+%%--------------------------------------------------------------------
+release_control_file_suffix(ErtsVsn, ReleaseName, ReleaseVsn) when is_list(ReleaseVsn) ->
+    lists:flatten([package_vsn_suffix(ErtsVsn, "Meta", "releases", ReleaseName, ReleaseVsn), "/", "control"]).
 
 %%====================================================================
 %% Other External Functions
