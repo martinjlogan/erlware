@@ -191,7 +191,12 @@ area([]) ->
 area(["Meta"|T]) ->	    
     [{area, "Meta"}|package_name(T)];
 area([Area|T]) ->	    
-    [{area, Area}|side(T)].
+    case regexp:match(hd(T), "erts.") of
+	{match, _, _} ->
+	    [{area, Area}|file(T)];
+	nomatch ->
+	    [{area, Area}|side(T)]
+    end.
 
 side([]) ->	    
     [];
@@ -250,6 +255,9 @@ decompose_suffix_test() ->
 
     ?assertMatch({error, {bad_file, "gas.tar.z"}}, 
 		 decompose_suffix("5.5.5/Generic/lib/gas/5.1.0/gas.tar.z")),
+
+    ?assertMatch([{erts_vsn, "5.5.5"}, {area, "Linux"}, {file, "erts.tar.gz"}],
+		  decompose_suffix("5.5.5/Linux/erts.tar.gz")),
 
     ?assertMatch([{erts_vsn, "5.5.5"}, {area, "Generic"}, {side, "lib"}],
 		  decompose_suffix("5.5.5/Generic/lib")),
