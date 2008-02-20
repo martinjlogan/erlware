@@ -24,8 +24,8 @@
 %%%-------------------------------------------------------------------
 %%% @doc
 %%%  Resolves individual items for the dependency engine.
+%%% @copyright Erlware 2007
 %%% @end
-%%% @copyright 2007
 %%%-------------------------------------------------------------------
 -module(ewr_resolver).
 

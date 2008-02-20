@@ -22,10 +22,10 @@
 %%% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 %%% OTHER DEALINGS IN THE SOFTWARE.
 %%%-------------------------------------------------------------------
+%%% @copyright 2007 Erlware
 %%% @doc
 %%%  Various common functions used throughout ewrepo
 %%% @end
-%%% @copyright 2007
 %%%-------------------------------------------------------------------
 -module(ewr_util).
 

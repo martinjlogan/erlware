@@ -23,10 +23,10 @@
 %%% OTHER DEALINGS IN THE SOFTWARE.
 %%%-------------------------------------------------------------------
 %%% @author Scott Parish
+%%% @copyright 2007 
 %%% @doc
 %%%   Uses backtracing to find the actual deps required.
 %%% @end
-%%% @copyright 2007
 %%%-------------------------------------------------------------------
 -module(ewr_deps_engine).
 

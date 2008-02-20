@@ -23,11 +23,11 @@
 %%% OTHER DEALINGS IN THE SOFTWARE.
 %%%-------------------------------------------------------------------
 %%% @author Eric Merritt
+%%% @copyright 2006 Erlware
 %%% @doc
 %%%   Figures out the dependencies for the application, via teh 
 %%%   ewr_deps_engine.
 %%% @end
-%%% @copyright 2006
 %%%-------------------------------------------------------------------
 -module(ewr_depends).
 

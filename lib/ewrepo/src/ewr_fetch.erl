@@ -23,6 +23,7 @@
 %%% OTHER DEALINGS IN THE SOFTWARE.
 %%%-------------------------------------------------------------------
 %%% @author Eric Merritt,  Martin Logan
+%%% @copyright 2006 Erlware
 %%% @doc
 %%%   Gets the list of fetchables from the environment and loads them
 %%%   into the local repository.
@@ -33,7 +34,6 @@
 %%%  @type timeout() = integer() | infinity. Timeouts are specified in milliseconds.
 %%%
 %%% @end
-%%% @copyright 2006
 %%%-------------------------------------------------------------------
 -module(ewr_fetch).
 
