@@ -1,7 +1,6 @@
 %%%-------------------------------------------------------------------
-%%% Copyright: Eric Merritt, Martin Logan, Erlware
-%%% File     : ewr_repo_dav.erl
-%%% Author   : Martin Logan <martinjlogan@erlware.org>
+%%% @copyright Erlware
+%%% @author    Martin Logan <martinjlogan@erlware.org>
 %%%
 %%% @doc This module houses respository structure aware functions in ewrepo. *Note* this file should not
 %%%      contain any convenience functions or shortcuts.  Those should be placed in higher level modules so that this 

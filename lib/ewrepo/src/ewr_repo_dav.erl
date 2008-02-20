@@ -1,7 +1,6 @@
 %%%-------------------------------------------------------------------
-%%% Copyright: Martin Logan, Eric Merritt, Erlware
-%%% File     : ewr_repo_dav.erl
-%%% Author   : Martin Logan <martinjlogan@erlware.org>
+%%% @copyright Erlware 2007
+%%% @author    Martin Logan <martinjlogan@erlware.org>
 %%%
 %%% @doc This module contains all functions in ewrepo that make requests to a remote repo. *Note* this file should not
 %%%      contain any convenience functions or shortcuts.  Those should be placed in higher level modules so that this 
