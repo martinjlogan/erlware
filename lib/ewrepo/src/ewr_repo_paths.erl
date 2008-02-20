@@ -178,7 +178,7 @@ decompose_suffix(Suffix) ->
 %%====================================================================
 
 analyse_tokens([ErtsVsn|T]) ->
-    case regexp:match(ErtsVsn, "^[0-9]+\.[0-9]+\.[0-9]+") of
+    case regexp:match(ErtsVsn, "^[0-9]+\.[0-9]+\(\.[0-9]+\)?") of
 	{match, 1, Length} when length(ErtsVsn) == Length ->
 	    [{erts_vsn, ErtsVsn}|area(T)];
 	_Error ->
@@ -246,17 +246,17 @@ erts_package_suffix_test() ->
     ?assertMatch("/5.5.5/myos/erts.tar.gz", erts_package_suffix("5.5.5", "myos")).
 
 package_vsn_suffix_test() ->
-    ?assertMatch("/5.5.5/Generic/lib/mnesia/1.0", package_vsn_suffix("5.5.5", "Generic", "lib", "mnesia", "1.0")).
+    ?assertMatch("/5.6/Generic/lib/mnesia/1.0", package_vsn_suffix("5.6", "Generic", "lib", "mnesia", "1.0")).
 
 decompose_suffix_test() ->
-    ?assertMatch({error, {bad_erts_vsn, "5.5"}}, 
-		 decompose_suffix("5.5/Generic/lib/gas/5.1.0/gas.tar.z")),
+    ?assertMatch({error, {bad_erts_vsn, "5.5.5.4"}}, 
+		 decompose_suffix("5.5.5.4/Generic/lib/gas/5.1.0/gas.tar.z")),
 
     ?assertMatch({error, {bad_file, "gas.tar.z"}}, 
 		 decompose_suffix("5.5.5/Generic/lib/gas/5.1.0/gas.tar.z")),
 
-    ?assertMatch([{erts_vsn, "5.5.5"}, {area, "Linux"}, {file, "erts.tar.gz"}],
-		  decompose_suffix("5.5.5/Linux/erts.tar.gz")),
+    ?assertMatch([{erts_vsn, "5.6"}, {area, "Linux"}, {file, "erts.tar.gz"}],
+		  decompose_suffix("5.6/Linux/erts.tar.gz")),
 
     ?assertMatch([{erts_vsn, "5.5.5"}, {area, "Generic"}, {side, "lib"}],
 		  decompose_suffix("5.5.5/Generic/lib")),
