@@ -167,8 +167,12 @@ erts_version() ->
 %%-------------------------------------------------------------------
 gen_multi_erts_repo_stub_suffix(TargetErtsVsn, Package, Areas, Side) -> 
     [MajorErtsVsn, MinorErtsVsn, HighPatchErtsVsn] = string:tokens(TargetErtsVsn, "."),
-    ErtsVsns = [lists:flatten([MajorErtsVsn, ".", MinorErtsVsn, ".", integer_to_list(E)]) || 
-		   E <- lists:seq(0, list_to_integer(HighPatchErtsVsn))], 
+    ErtsVsns = lists:map(fun(PatchVsn) when PatchVsn > 0 ->
+				 lists:flatten([MajorErtsVsn, ".", MinorErtsVsn, ".", integer_to_list(PatchVsn)]);
+			    (0) ->
+				 lists:flatten([MajorErtsVsn, ".", MinorErtsVsn])
+			 end,
+			 lists:seq(0, list_to_integer(HighPatchErtsVsn))),
     lists:foldr(fun(ErtsVsn, Acc) -> Acc ++ gen_repo_stub_suffix(ErtsVsn, Package, Areas, Side) end, [], ErtsVsns).
     
 %% @spec gen_multi_erts_repo_stub_suffix(Package, Areas, Side) -> GeneratedUrls::list()
