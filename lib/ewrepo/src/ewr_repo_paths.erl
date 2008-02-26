@@ -239,11 +239,11 @@ file([File]) ->
 %% Test Functions
 %%====================================================================
 
-dot_rel_file_suffix_test() ->
-    ?assertMatch("/5.5.5/Meta/faxien/1.0/faxien.app", dot_app_file_suffix("5.5.5", "faxien", "1.0")),
+dot_app_file_suffix_test() ->
+    ?assertMatch("/5.5.5/Meta/faxien/1.0/faxien.app", dot_app_file_suffix("5.5.5", "faxien", "1.0")).
 
 dot_rel_file_suffix_test() ->
-    ?assertMatch("/5.5.5/Meta/releases/faxien/1.0/faxien.rel", dot_rel_file_suffix("5.5.5", "faxien", "1.0")),
+    ?assertMatch("/5.5.5/Meta/releases/faxien/1.0/faxien.rel", dot_rel_file_suffix("5.5.5", "faxien", "1.0")).
 
 erts_package_suffix_test() ->
     ?assertMatch("/5.5.5/myos/erts.tar.gz", erts_package_suffix("5.5.5", "myos")).
