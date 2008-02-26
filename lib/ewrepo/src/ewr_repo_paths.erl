@@ -74,7 +74,7 @@ erts_suffix(ErtsVsn) when is_list(ErtsVsn) ->
 %% @end 
 %%--------------------------------------------------------------------
 area_suffix(ErtsVsn, Area) when is_list(Area) ->
-    ewl_file:join_paths(erts_suffix(ErtsVsn), Area).
+    filename:join([erts_suffix(ErtsVsn), Area]).
 
 %%--------------------------------------------------------------------
 %% @doc Returns the suffix pointing to the repo location for a given side; lib, or releases, etc... 
@@ -85,7 +85,7 @@ area_suffix(ErtsVsn, Area) when is_list(Area) ->
 side_suffix(ErtsVsn, "Meta" = Area, Side) when Side == "lib" ->
     area_suffix(ErtsVsn, Area);
 side_suffix(ErtsVsn, Area, Side) when Side == "lib"; Side == "releases" ->
-    ewl_file:join_paths(area_suffix(ErtsVsn, Area), Side).
+    filename:join([area_suffix(ErtsVsn, Area), Side]).
 
 %%--------------------------------------------------------------------
 %% @doc Returns the suffix pointing to the repo location for a given package name.
@@ -93,7 +93,7 @@ side_suffix(ErtsVsn, Area, Side) when Side == "lib"; Side == "releases" ->
 %% @end 
 %%--------------------------------------------------------------------
 package_name_suffix(ErtsVsn, Area, Side, PackageName) when is_list(PackageName) ->
-    ewl_file:join_paths(side_suffix(ErtsVsn, Area, Side), PackageName).
+    filename:join([side_suffix(ErtsVsn, Area, Side), PackageName]).
     
 %%--------------------------------------------------------------------
 %% @doc Returns the suffix pointing to the repo location for a given package name.
@@ -102,7 +102,7 @@ package_name_suffix(ErtsVsn, Area, Side, PackageName) when is_list(PackageName) 
 %% @end 
 %%--------------------------------------------------------------------
 package_vsn_suffix(ErtsVsn, Area, Side, PackageName, PackageVsn) when is_list(PackageVsn) ->
-    ewl_file:join_paths(package_name_suffix(ErtsVsn, Area, Side, PackageName), PackageVsn).
+    filename:join([package_name_suffix(ErtsVsn, Area, Side, PackageName), PackageVsn]).
     
 
 %%====================================================================
@@ -115,7 +115,7 @@ package_vsn_suffix(ErtsVsn, Area, Side, PackageName, PackageVsn) when is_list(Pa
 %% @end 
 %%--------------------------------------------------------------------
 erts_package_suffix(ErtsVsn, Area) when is_list(ErtsVsn) ->
-    ewl_file:join_paths(area_suffix(ErtsVsn, Area), "erts.tar.gz").
+    filename:join([area_suffix(ErtsVsn, Area), "erts.tar.gz"]).
 
 %%--------------------------------------------------------------------
 %% @doc Returns the suffix pointing to the actual package for the given name and version.
@@ -150,7 +150,7 @@ dot_rel_file_suffix(ErtsVsn, ReleaseName, ReleaseVsn) when is_list(ReleaseVsn) -
 %% @end 
 %%--------------------------------------------------------------------
 release_control_file_suffix(ErtsVsn, ReleaseName, ReleaseVsn) when is_list(ReleaseVsn) ->
-    lists:flatten([package_vsn_suffix(ErtsVsn, "Meta", "releases", ReleaseName, ReleaseVsn), "/", "control"]).
+    filename:join([package_vsn_suffix(ErtsVsn, "Meta", "releases", ReleaseName, ReleaseVsn), "control"]).
 
 %%====================================================================
 %% Other External Functions
@@ -240,7 +240,10 @@ file([File]) ->
 %%====================================================================
 
 dot_rel_file_suffix_test() ->
-    ?assertMatch("/5.5.5/Meta/faxien/1.0/faxien.rel", dot_rel_file_suffix("5.5.5", "faxien", "1.0")).
+    ?assertMatch("/5.5.5/Meta/faxien/1.0/faxien.app", dot_app_file_suffix("5.5.5", "faxien", "1.0")),
+
+dot_rel_file_suffix_test() ->
+    ?assertMatch("/5.5.5/Meta/releases/faxien/1.0/faxien.rel", dot_rel_file_suffix("5.5.5", "faxien", "1.0")),
 
 erts_package_suffix_test() ->
     ?assertMatch("/5.5.5/myos/erts.tar.gz", erts_package_suffix("5.5.5", "myos")).
