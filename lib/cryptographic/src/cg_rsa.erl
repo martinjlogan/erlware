@@ -9,7 +9,11 @@
 -module(cg_rsa).
 
 %% API
--export([key_gen/1]).
+-export([
+	 key_gen/1,
+	 encrypt/3,
+	 decrypt/3
+	 ]).
 
 %%%===================================================================
 %%% API
@@ -17,7 +21,7 @@
 
 %%--------------------------------------------------------------------
 %% @doc Generate rsa public and private keys
-%% @spec key_gen(StartVal) -> {ok, {{public_key, {N, E}}, {private_key, {N, D}}}}
+%% @spec key_gen(StartVal::integer()) -> {ok, {{public_key, {N, E}}, {private_key, {N, D}}}}
 %% @end
 %%--------------------------------------------------------------------
 key_gen(StartVal) ->
@@ -34,7 +38,40 @@ key_gen(StartVal) ->
     io:format("E = ~p~n D = ~p~n", [E, D]),
     {ok, {{public_key, {N, E}}, {private_key, {N, D}}}}.
     
+%%--------------------------------------------------------------------
+%% @doc Encrypt a number. 
+%% @spec encrypt(Msg, N, E) -> integer()
+%% where
+%%  Msg = integer()
+%%  N = integer()
+%%  E = integer()
+%% @end
+%%--------------------------------------------------------------------
+encrypt(Msg, N, E) ->
+    round(math:pow(Msg, E)) rem N. 
+    
+%%--------------------------------------------------------------------
+%% @doc Decrypt a number. 
+%% @spec encrypt(Msg, N, D) -> integer()
+%% where
+%%  Msg = integer()
+%%  N = integer()
+%%  D = integer()
+%% @end
+%%--------------------------------------------------------------------
+decrypt(Msg, N, D) ->
+    decrypt1(Msg, N, D) rem N. 
 
+decrypt1(Msg, _N, 1) ->
+    Msg;
+decrypt1(Msg, N, D) ->
+    io:format("Msg = ~p, N = ~p, D = ~p~n", [Msg, N, D]),
+    case D rem 2 of
+	0 ->
+	    decrypt(round(math:pow(Msg, 2)) rem N, N, round(D/2));
+	1 ->
+	    Msg * decrypt(Msg, N, D - 1)
+    end.
 	    
 %%%===================================================================
 %%% Internal functions
@@ -48,3 +85,12 @@ find_congruency(E, TN, D) ->
 	0 -> D;
 	_ -> find_congruency(E, TN, D + 1)
     end.
+
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
+decode_test() ->
+    %Code = cg_rsa:encrypt(4, 6097, 7).
+    %?assertMatch(Code, cg_rsa:decrypt(4190, 6097, 4243)).
+    ok.
+
