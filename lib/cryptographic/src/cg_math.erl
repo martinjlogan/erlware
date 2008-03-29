@@ -13,7 +13,8 @@
 	 prime/1, 
 	 floor/1,
 	 gcd/2,
-	 small_coprime/1
+	 small_coprime/1,
+	 coprime/2
 	]).
 
 %%%===================================================================
@@ -21,7 +22,7 @@
 %%%===================================================================
 
 %%--------------------------------------------------------------------
-%% @doc Returns all prime numbers from 1 to N
+%% @doc Returns all prime numbers from the first prime number to N
 %% @spec primes(N) -> [integer()]
 %% @end
 %%--------------------------------------------------------------------
@@ -36,24 +37,25 @@ prime(N) ->
     primeit(S, MRoot, Half).
 
 primeit(S, MRoot, Half) ->
-    primeit(3, 1, array:from_list(S), MRoot, Half).
+    primeit(3, 0, array:from_list(S, 0), MRoot, Half).
 
 primeit(M, _I, S, MRoot, _Half) when M > MRoot ->
     [2|array:sparse_to_list(S)];
 primeit(M, I, S, MRoot, Half) ->
+    NewI = I + 1,
     case array:get(I, S) of
-	Undef when Undef == undefined; Undef == 0 ->
-	    primeit(2 * I + 4, I + 1, S, MRoot, Half);
+	0 ->
+	    primeit(2 * NewI + 3, NewI, S, MRoot, Half);
 	_Int ->
-	    J = floor((M * M - 3) / 2),
-	    NS = vacumeit(array:set(J, undefined, S), M, J, Half),
-	    primeit(2 * I + 4, I + 1, NS, MRoot, Half)
+	    J    = floor((M * M - 3) / 2),
+	    NS   = vacumeit(array:set(J, 0, S), M, J, Half),
+	    primeit(2 * NewI + 3, NewI, NS, MRoot, Half)
     end.
 	    
 vacumeit(S, _M, J, Half) when J >= Half ->
     S;
 vacumeit(S, M, J, Half) ->
-    vacumeit(array:set(J, undefined, S), M, J + M, Half).
+    vacumeit(array:set(J, 0, S), M, J + M, Half).
 
 %%--------------------------------------------------------------------
 %% @doc Returns the highest integer less than or equal to the number N.
@@ -67,17 +69,22 @@ floor(N) ->
     end.
 	    
 %%--------------------------------------------------------------------
-%% @doc Find a random coprime number less than N.
-%% @spec coprime_less_than(N) -> integer()
+%% @doc Find the smallest coprime number less than N.
+%% @spec small_coprime(N) -> integer()
 %% @end
 %%--------------------------------------------------------------------
 small_coprime(N) ->    
-    small_coprime(N, 2).    
+    coprime(N, 2).    
 			
-small_coprime(N, E) ->    
+%%--------------------------------------------------------------------
+%% @doc Find a coprime number less than N and greater than E.
+%% @spec coprime(N, E) -> integer()
+%% @end
+%%--------------------------------------------------------------------
+coprime(N, E) ->    
     case gcd(N, E) of
 	1 -> E;
-	_ -> small_coprime(N, E + 1)
+	_ -> coprime(N, E + 1)
     end.
 
 %%--------------------------------------------------------------------
