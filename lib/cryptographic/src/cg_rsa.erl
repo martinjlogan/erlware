@@ -10,7 +10,9 @@
 
 %% API
 -export([
-	 key_gen/1,
+	 keygen/0,
+	 keygen/1,
+	 keygen/2,
 	 encrypt/3,
 	 padded_encrypt/3,
 	 decrypt/3,
@@ -22,24 +24,43 @@
 %%%===================================================================
 
 %%--------------------------------------------------------------------
-%% @doc Generate rsa public and private keys
-%% @spec key_gen(StartVal::integer()) -> {ok, {{public_key, {N, E}}, {private_key, {N, D}}, {max_message_size, Bytes}}}
+%% @doc Generate rsa public and private keys. The primes chose to do the generation should be of a length
+%%      specified by Digits. 
+%% @spec keygen(Digits) -> {ok, {{public_key, {N, E}}, {private_key, {N, D}}, {max_message_size, Bytes}}}
 %% @end
 %%--------------------------------------------------------------------
-key_gen(StartVal) ->
-    %% @todo XXX this is in place to get rid of small primes which lead to low max message size. Makes the prime selection
-    %%       more predicable though and thus the algorithm less secure.  How do others handle this?
-    AllPrimes = cg_math:prime(StartVal),
-    Primes    = lists:nthtail(round(length(AllPrimes) / 2), AllPrimes),
-    P = lists:nth(random:uniform(length(Primes)), Primes),
-    Q = lists:nth(random:uniform(length(Primes)), Primes),
+keygen(Digits) ->
+    P = cg_math:prime(Digits),
+    Q = cg_math:prime(Digits),
+    case keygen(P, Q) of
+	{error, {negative_private_key_exponent, _}} -> keygen(Digits);
+	Keys                                        -> Keys
+    end.
+
+%% @spec keygen() -> {ok, {{public_key, {N, E}}, {private_key, {N, D}}, {max_message_size, Bytes}}} 
+%% @equiv keygen(64)
+keygen() ->
+    keygen(64).
+
+%%--------------------------------------------------------------------
+%% @doc Generate rsa public and private keys. Key gen needs as input two prime numbers P and Q
+%% @spec keygen(P, Q) -> {ok, {{public_key, {N, E}}, {private_key, {N, D}}, {max_message_size, Bytes}}} | {error, Reason}
+%% @end
+%%--------------------------------------------------------------------
+keygen(P, Q) ->
     N = P * Q,
     % Compute the Eulers Totient of two primes
     TN = (P - 1) * (Q - 1),
-    E = larger_coprime(TN),
-    D = find_congruency(E, TN),
-    {ok, {{public_key, {N, E}}, {private_key, {N, D}}, {max_message_size, lists:min([P, Q])}}}.
-
+    E = cg_math:small_coprime(TN),
+    case cg_math:extended_gcd(E, TN) of
+	{D, _} when D < 0 ->
+	    %% @todo Find out if this can be prevented. Is there a better way to pick primes. What about Rabin-Miller?
+	    {error, {negative_private_key_exponent,
+		     "the primes chosen produced a negative value for d - please pick new primes"}};
+	{D, _} ->
+	    {ok, {{public_key, {N, E}}, {private_key, {N, D}}, {max_message_size, lists:min([P, Q])}}}
+    end.
+    
 %%--------------------------------------------------------------------
 %% @doc Encrypt a number. 
 %% @spec encrypt(Msg, N, E) -> integer()
@@ -50,10 +71,10 @@ key_gen(StartVal) ->
 %% @end
 %%--------------------------------------------------------------------
 encrypt(Msg, N, E) ->
-    apply_key(Msg, N, E).
+    cg_math:exp_mod(Msg, N, E).
 
 %%--------------------------------------------------------------------
-%% @doc Encrypt a number with padding. 
+%% @doc A convenience function to encrypt a number with padding.
 %% @spec padded_encrypt(Msg, N, E) -> integer()
 %% where
 %%  Msg = integer()
@@ -64,7 +85,7 @@ encrypt(Msg, N, E) ->
 padded_encrypt(RawMsg, N, E) ->
     Pad = 9 + random:uniform(90),
     Msg = list_to_integer(lists:flatten([integer_to_list(RawMsg), integer_to_list(Pad)])),
-    apply_key(Msg, N, E).
+    cg_math:exp_mod(Msg, N, E).
     
 %%--------------------------------------------------------------------
 %% @doc Decrypt a number. 
@@ -76,10 +97,10 @@ padded_encrypt(RawMsg, N, E) ->
 %% @end
 %%--------------------------------------------------------------------
 decrypt(Msg, N, D) ->
-    apply_key(Msg, N, D). 
+    cg_math:exp_mod(Msg, N, D). 
 
 %%--------------------------------------------------------------------
-%% @doc Decrypt a number that has been padded. 
+%% @doc A convenience function to decrypt a number that has been padded by the function padded_encrypt. 
 %% @spec padded_decrypt(Msg, N, D) -> integer()
 %% where
 %%  Msg = integer()
@@ -92,61 +113,16 @@ padded_decrypt(Msg, N, D) ->
     list_to_integer(
       lists:reverse(
 	lop_off(
-	  lists:reverse(integer_to_list(apply_key(Msg, N, D))),
+	  lists:reverse(integer_to_list(cg_math:exp_mod(Msg, N, D))),
 	  PaddingLength
 	 ))).
-
-	    
-%%%===================================================================
-%%% Internal functions
-%%%===================================================================
-
-find_congruency(E, TN) ->
-    find_congruency(E, TN, 1). 
-
-find_congruency(E, TN, D) ->
-    case (D * E - 1) rem TN of
-	0 -> D;
-	_ -> find_congruency(E, TN, D + 1)
-    end.
-
-%% @private
-%% @todo make this function more strategic in terms of where bounds are set. Also research to see if the fact that 5
-%%       is predictable when starting at 2 is a problem in terms of the overall algorithm - perhaps this is not
-%%       needed.  
-%% @doc Find a random coprime number less than N.
-%% @spec coprime_less_than(N) -> integer()
-%% @end
-larger_coprime(N) when N < 100 ->    
-    cg_math:small_coprime(N);
-larger_coprime(N) ->    
-    cg_math:coprime(N, 20).    
-			
 
 lop_off(List, 0) ->
     List;
 lop_off([_|T], Count) ->
     lop_off(T, Count - 1).
 
-%% @private
-%% @doc Apply an RSA key pair to a value. 
-%% @spec apply_key(Msg, N, D) -> integer()
-%% where
-%%  Msg = integer()
-%%  N = integer()
-%%  D = integer()
-%% @end
-apply_key(Msg, N, D) ->
-    apply_key1(Msg, N, D) rem N.
-
-apply_key1(Msg, _N, 1) ->
-    Msg;
-apply_key1(Msg, N, D) ->
-    case D rem 2 of
-	0 -> apply_key1(round(math:pow(Msg, 2)) rem N, N, round(D/2));
-	1 -> Msg * apply_key1(Msg, N, D - 1)
-    end.
-
+    
 %%%===================================================================
 %%% Test functions
 %%%===================================================================
@@ -155,12 +131,12 @@ apply_key1(Msg, N, D) ->
     %?assertMatch(4, cg_rsa:decrypt(Code, 6097, 4243)).
 
 %full_padded_rsa_test() ->
-%    {ok, {{_, {N, E}}, {_, {N, D}}, _}} = cg_rsa:key_gen(1000),
+%    {ok, {{_, {N, E}}, {_, {N, D}}, _}} = cg_rsa:keygen(1000),
 %    Code = cg_rsa:padded_encrypt(1, N, E),
 %    ?assertMatch(1, cg_rsa:padded_decrypt(Code, N, D)).
 
 
 %full_rsa_test() ->
-%    {ok, {{_, {N, E}}, {_, {N, D}}, _}} = cg_rsa:key_gen(500),
+%    {ok, {{_, {N, E}}, {_, {N, D}}, _}} = cg_rsa:keygen(500),
 %    Code = cg_rsa:encrypt(1, N, E),
 %    ?assertMatch(1, cg_rsa:decrypt(Code, N, D)).
