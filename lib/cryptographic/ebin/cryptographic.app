@@ -5,12 +5,13 @@
   {description, "Provides cryptographic functionality written in pure Erlang i.e no dependency on non-erlang code."},
 
   % The version of the applicaton
-  {vsn, "0.1.0"},
+  {vsn, "0.2.0"},
 
   % All modules used by the application.
   {modules,
    [
-    cg_rsa
+    cg_rsa,
+    cg_math
    ]},
 
   % All of the registered names the application uses.
