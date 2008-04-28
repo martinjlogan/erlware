@@ -236,13 +236,17 @@ set_env(Application, Key, Val) ->
 modify_config_file(FileLocation, AppGroup, Key, Val) ->
     case gas:get_env(AppGroup, Key, undefined) of
 	{ok, undefined} -> 
-	    {error, no_such_config_entry};
+	    write_out_key_group(FileLocation, AppGroup, Key),
+	    write_out_entry(FileLocation, AppGroup, Key, Val);
 	{ok, _Value} ->
-	    {ok, [Terms]} = file:consult(FileLocation),
-	    NewTerms    = substitute_entry(Terms, AppGroup, Key, Val),
-	    {ok, IOD}   = file:open(FileLocation, [write]),
-	    io:fwrite(IOD, "~p. ~n", [NewTerms])
+	    write_out_entry(FileLocation, AppGroup, Key, Val) 
     end.
+
+write_out_entry(FileLocation, AppGroup, Key, Val) ->
+  {ok, [Terms]} = file:consult(FileLocation),
+  NewTerms    = substitute_entry(Terms, AppGroup, Key, Val),
+  {ok, IOD}   = file:open(FileLocation, [write]),
+  io:fwrite(IOD, "~p. ~n", [NewTerms]).
 
 substitute_entry([{AppGroup, GroupBody}|T], AppGroup, Key, Value) ->
     [{AppGroup, lists:foldr(fun({Key_, _}, Acc) when Key_ == Key -> [{Key, Value}|Acc];
@@ -253,6 +257,16 @@ substitute_entry([AppGroup2|T], AppGroup, Key, Value) ->
 substitute_entry([], _AppGroup, _Key, _Value) ->
     [].
 
+write_out_key_group(FileLocation, AppGroup, Key) ->
+    {ok, [Terms]} = file:consult(FileLocation),
+    NewTerms = lists:foldr(
+		 fun({AppGroup_, GroupBody}, Acc) when AppGroup == AppGroup_ -> [{AppGroup, [{Key, []}|GroupBody]}|Acc];
+		    (AppGroup_, Acc)                                          -> [AppGroup_|Acc]
+		 end,
+		 [], Terms),
+    {ok, IOD}   = file:open(FileLocation, [write]),
+    io:fwrite(IOD, "~p. ~n", [NewTerms]).
+    
 
 %%--------------------------------------------------------------------
 %% @doc Modify the value of a config entry with a fun. The fun will take the old value and return a new one.  The new value will

@@ -46,7 +46,9 @@
 	 erts_package_suffix/2,
 	 dot_app_file_suffix/3,
 	 dot_rel_file_suffix/3,
-	 release_control_file_suffix/3
+	 release_control_file_suffix/3,
+	 signature_file_suffix/4,
+	 erts_signature_file_suffix/2
         ]).
 
 -export([
@@ -151,6 +153,23 @@ dot_rel_file_suffix(ErtsVsn, ReleaseName, ReleaseVsn) when is_list(ReleaseVsn) -
 %%--------------------------------------------------------------------
 release_control_file_suffix(ErtsVsn, ReleaseName, ReleaseVsn) when is_list(ReleaseVsn) ->
     filename:join([package_vsn_suffix(ErtsVsn, "Meta", "releases", ReleaseName, ReleaseVsn), "control"]).
+
+%%--------------------------------------------------------------------
+%% @doc Returns the suffix pointing to the signature file stored in the repo for a package (does not apply to erts).
+%% @spec signature_file_suffix(ErtsVsn::string(), Side::string(), PackageName::string(), PackageVsn::string()) -> 
+%%        string()
+%% @end 
+%%--------------------------------------------------------------------
+signature_file_suffix(ErtsVsn, Side, PackageName, PackageVsn) when is_list(PackageVsn) ->
+    lists:flatten([package_vsn_suffix(ErtsVsn, "Meta", Side, PackageName, PackageVsn), "/", "signature"]).
+
+%%--------------------------------------------------------------------
+%% @doc Returns the suffix pointing to the signature file stored in the repo for an erts package.
+%% @spec erts_signature_file_suffix(ErtsVsn::string(), Area::string()) -> string()
+%% @end 
+%%--------------------------------------------------------------------
+erts_signature_file_suffix(ErtsVsn, Area) ->
+    lists:flatten([area_suffix(ErtsVsn, Area), "/", "signature"]).
 
 %%====================================================================
 %% Other External Functions
