@@ -1,0 +1,46 @@
+@title Welcome to the GAS (General Application Services) application
+@doc 
+
+<img src="http://www.martinjlogan.com/images/erlware-header.gif"/>
+
+<p>
+GAS provides general application services to a release. What is a general application service you may ask? It is a service
+that many applications may want to employ to accomplish some task. Log file rotation and truncation is a good example of such
+a service. A problem can arise from this if more than one application in a release includes a general service that happens
+to use a registered name, or in the case of file rotation, happens to modify a single resource in a non idempotent manner. GAS 
+allows the owner of a release to configure these services to run on a per release basis instead of a per application basis. 
+For example to configure file rotation and trunction with ewl_elwrap_h, which is found in the ewlib application, the release 
+config entries would be the following
+</p>
+
+```
+ {sasl,   [{sasl_error_logger, {file, "/tmp/sasl_log"}}]},
+ 
+ {gas,
+  [
+   %% indicates the module function and optionally args of the services to startup.
+   {mod_specs, [{elwrap, {ewl_elwrap_h, start_link}}]},
+   
+   %% ewl_elwrap_h specific config. These are specified by the GAS 
+   %% configuration_spec/1 callback function within the ewl_elwrap_h module
+   {err_log, "/tmp/err_log"},
+   {err_log_wrap_info, {{err,5000000,10},{sasl,5000000,10}}},
+   {err_log_tty, false}
+  ]
+ },
+'''
+
+<p>
+GAS also has one other important function.  It provides extended support for managing erlang configuration files. The application module provides some basic support but does not give the ability to:
+</p>
+<ul>
+  <li>Modify config values at runtime</li>
+  <li>Rewrite config files at runtime</li>
+  <li>Easily set default config values in your code</li>
+</ul>
+<p>
+GAS provides the ability to do these things.
+</p>
+
+@author Martin Logan
+@copyright 2007, 2008 Erlware
