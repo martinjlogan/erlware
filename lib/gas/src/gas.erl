@@ -215,7 +215,7 @@ set_env(Application, Key, Val) ->
     application:set_env(Application, Key, Val).
 
 %%--------------------------------------------------------------------
-%% @doc Alters the configuration file.
+%% @doc Alters the configuration file by inserting or overwriting a key value pair for a particular application.
 %% <pre>
 %%
 %% Expects:
@@ -269,17 +269,23 @@ write_out_key_group(FileLocation, AppGroup, Key) ->
     
 
 %%--------------------------------------------------------------------
-%% @doc Modify the value of a config entry with a fun. The fun will take the old value and return a new one.  The new value will
-%%      be placed inside the configuration file. 
+%% @doc Modify the value of a config entry with a fun. The fun will take the old value and return a new one.
+%%      The new value will be placed inside the configuration file as well as the runtime config store.
 %% <pre>
 %% Expects:
 %%  AppGroup - The application grouping to be outputd.
 %%  Key      - The Key of the value to be inserted
 %%  Fun      - The fun to modify the value. The fun is of the form fun(OldValue) -> NewValue end.
+%%
+%% Example: modify_config_value("/tmp/app.config", gas, spec, 
+%%                              fun(undefined) -> [NewValue];
+%%                                 (OldValue)  -> [NewValue|OldValue] end).
+%%
+%% modify_config_value/4 passes OldValue to the fun supplied. It is important to handle the case for undefined in case
+%% there was no previous entry in the config for the key supplied.
 %% </pre>
 %%
-%%
-%% @spec modify_config_value(FileLocation, AppGroup, Key, Fun) -> ok | {error, Reason}
+%% @spec modify_config_value(FileLocation, AppGroup, Key, Fun) -> ok 
 %% where
 %%  AppGroup = term()
 %%  Key = term()
@@ -291,7 +297,9 @@ modify_config_value(FileLocation, AppGroup, Key, Fun) ->
 	{ok, undefined} -> 
 	    {error, no_such_config_entry};
 	{ok, Value} ->
-	    modify_config_file(FileLocation, AppGroup, Key, Fun(Value))
+	    NewValue = Fun(Value),
+	    gas:set_env(AppGroup, Key, NewValue),
+	    modify_config_file(FileLocation, AppGroup, Key, NewValue)
     end.
 
 %%--------------------------------------------------------------------
