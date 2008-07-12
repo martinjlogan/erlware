@@ -10,7 +10,8 @@
 
 %% API
 -export([
-	 find_project_root/1
+	 find_project_root/1,
+         get_build_flavors/1
 	]).
 
 %%%===================================================================
@@ -21,9 +22,8 @@
 %% @doc
 %%   find "_build.cfg" in the current directory. if not recurse
 %%   with parent directory.
-%% @spec (Directory::string()) -> ok
+%% @spec (Directory::string()) -> string()
 %% @end
-%% @private
 %%-------------------------------------------------------------------
 find_project_root("/") ->
     throw(no_build_config);
@@ -35,6 +35,15 @@ find_project_root(Directory) ->
         false ->
             find_project_root(filename:dirname(Directory))
     end.
+
+%%-------------------------------------------------------------------
+%% @doc
+%%   Return a list of the build flavors presently built for.
+%% @spec (ProjectRootDir::string()) -> [string()] 
+%% @end
+%%-------------------------------------------------------------------
+get_build_flavors(ProjectRootDir) ->
+    [filename:basename(E) || E <- filelib:wildcard(filename:join(ProjectRootDir, "_build/*"))].
 
 %%%===================================================================
 %%% Internal functions
