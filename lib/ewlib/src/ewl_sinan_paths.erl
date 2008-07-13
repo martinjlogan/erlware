@@ -11,7 +11,9 @@
 %% API
 -export([
 	 find_project_root/1,
-         get_build_flavors/1
+         get_build_flavors/1,
+	 dist_tarball_path/4,
+	 built_app_path/4
 	]).
 
 %%%===================================================================
@@ -44,6 +46,22 @@ find_project_root(Directory) ->
 %%-------------------------------------------------------------------
 get_build_flavors(ProjectRootDir) ->
     [filename:basename(E) || E <- filelib:wildcard(filename:join(ProjectRootDir, "_build/*"))].
+
+%%-------------------------------------------------------------------
+%% @doc Return the location of a built application.
+%% @spec built_app_path(ProjectRootDir, BuildFlavor, AppName, AppVsn) -> string()
+%% @end
+%%-------------------------------------------------------------------
+built_app_path(ProjectRootDir, BuildFlavor, AppName, AppVsn) ->
+    filename:join([ProjectRootDir, "_build", BuildFlavor, "apps", lists:flatten([AppName, "-", AppVsn])]).
+
+%%-------------------------------------------------------------------
+%% @doc Return the location of a dist tarball
+%% @spec dist_tarball_path(ProjectRootDir, BuildFlavor, ReleaseName, ReleaseVsn) -> string()
+%% @end
+%%-------------------------------------------------------------------
+dist_tarball_path(ProjectRootDir, BuildFlavor, ReleaseName, ReleaseVsn) ->
+    filename:join([ProjectRootDir, "_build", BuildFlavor, "tar", lists:flatten([ReleaseName, "-", ReleaseVsn])]).
 
 %%%===================================================================
 %%% Internal functions
