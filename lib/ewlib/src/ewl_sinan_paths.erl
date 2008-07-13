@@ -61,7 +61,7 @@ built_app_path(ProjectRootDir, BuildFlavor, AppName, AppVsn) ->
 %% @end
 %%-------------------------------------------------------------------
 dist_tarball_path(ProjectRootDir, BuildFlavor, ReleaseName, ReleaseVsn) ->
-    filename:join([ProjectRootDir, "_build", BuildFlavor, "tar", lists:flatten([ReleaseName, "-", ReleaseVsn])]).
+    filename:join([ProjectRootDir, "_build", BuildFlavor, "tar", lists:flatten([ReleaseName, "-", ReleaseVsn, ".tar.gz"])]).
 
 %%%===================================================================
 %%% Internal functions
