@@ -430,13 +430,18 @@ handle_tar_file(To, ActualTo) ->
     ok.
 
 create_system_info_series(ArchString) ->
-    {ok, {[MinorVersionString], Rest}} = ewl_string_manip:n_tokens(lists:reverse(ArchString), 1, "."),
-    ArchStringPart = lists:reverse(Rest),
-    MinorVersions = lists:reverse(lists:seq(0, list_to_integer(MinorVersionString))),
-    lists:map(fun(MinorVersion) ->
-		      lists:flatten([ArchStringPart, ".", integer_to_list(MinorVersion)])
-	      end,
-	      MinorVersions).
+    try
+	{ok, {[MinorVersionString], Rest}} = ewl_string_manip:n_tokens(lists:reverse(ArchString), 1, "."),
+	ArchStringPart = lists:reverse(Rest),
+	MinorVersions = lists:reverse(lists:seq(0, list_to_integer(MinorVersionString))),
+	lists:map(fun(MinorVersion) ->
+			  lists:flatten([ArchStringPart, ".", integer_to_list(MinorVersion)])
+		  end,
+		  MinorVersions)
+    catch
+	_C:_E ->
+	    [ArchString]
+    end.
     
 create_system_info_series_test() ->
     ?assertMatch(["a-1.3", "a-1.2", "a-1.1", "a-1.0"], create_system_info_series("a-1.3")).
