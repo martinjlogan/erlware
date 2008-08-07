@@ -331,7 +331,7 @@ gather_versions(Base, Rest) ->
 
 gather_versions(Base, [H | T], Acc) ->
     gather_versions(Base, T,
-                    [ewr_util:parse_version(lists:nthtail(Base, H)) | Acc]);
+	[ewr_util:parse_version(string:strip(lists:nthtail(Base, H), both, $/)) | Acc]);
 gather_versions(_Base, [], Acc) ->
     Acc.
 
