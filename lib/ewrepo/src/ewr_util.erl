@@ -100,16 +100,34 @@ join(List, Sep) ->
 system_info() ->
     case catch chop_sys_info(erlang:system_info(system_architecture)) of
 	{'EXIT', Reason} ->
-		error_logger:info_msg("sys_info threw an error ~p~n", [Reason]),
-	    throw({invalid_version, "Unable to get system architecture, this may be a pre R9 runtime. Erlang versions pre R9 are not supported"});
+	    error_logger:info_msg("sys_info threw an error ~p~n", [Reason]),
+	    throw({invalid_version, "Unable to get system architecture," ++
+		                    "this may be a pre R9 runtime. Erlang versions pre R9 are not supported"});
 	SystemName ->
 	    case is_posix(SystemName) of
                 true ->
 		    string:strip(lists:flatten([SystemName, "-glibc-", glibc_version()]), right, $\n);
                 false ->
-                    SystemName
+                    actual_kernel_version(SystemName)
             end
     end.
+
+actual_kernel_version(SystemName) ->
+    case os:find_executable(uname) of
+	false ->
+	    SystemName;
+	Uname ->
+	    OSVsn = string:strip(os:cmd(Uname ++ " -r"), right, $\n),
+	    case regexp:sub(SystemName, "[0-9\.]+$", "") of
+		{ok,SystemNameSansVsn,1} ->
+		    SystemNameSansVsn ++ OSVsn;
+		Error ->
+		    error_logger:info_msg("ewr_util:actual_kernel_version error in system name parsing ~p~n", [Error]),
+		    SystemName
+	    end
+    end.
+	    
+    
 
 glibc_version() ->
     case erlang:system_info(allocator) of
