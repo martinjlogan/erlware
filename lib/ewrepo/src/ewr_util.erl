@@ -120,7 +120,7 @@ actual_kernel_version(SystemName) ->
 	    OSVsn = string:strip(os:cmd(Uname ++ " -r"), right, $\n),
 	    case regexp:sub(SystemName, "[0-9\.]+$", "") of
 		{ok,SystemNameSansVsn,1} ->
-		    SystemNameSansVsn ++ OSVsn;
+		    chop_sys_info(SystemNameSansVsn ++ OSVsn);
 		Error ->
 		    error_logger:info_msg("ewr_util:actual_kernel_version error in system name parsing ~p~n", [Error]),
 		    SystemName
