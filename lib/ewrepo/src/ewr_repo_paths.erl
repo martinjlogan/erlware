@@ -48,7 +48,9 @@
 	 dot_rel_file_suffix/3,
 	 release_control_file_suffix/3,
 	 signature_file_suffix/4,
-	 erts_signature_file_suffix/2
+	 erts_signature_file_suffix/2,
+	 checksum_file_suffix/4,
+	 erts_checksum_file_suffix/2
         ]).
 
 -export([
@@ -170,6 +172,23 @@ signature_file_suffix(ErtsVsn, Side, PackageName, PackageVsn) when is_list(Packa
 %%--------------------------------------------------------------------
 erts_signature_file_suffix(ErtsVsn, Area) ->
     lists:flatten([area_suffix(ErtsVsn, Area), "/", "signature"]).
+
+%%--------------------------------------------------------------------
+%% @doc Returns the suffix pointing to the checksum file stored in the repo for a package (does not apply to erts).
+%% @spec checksum_file_suffix(ErtsVsn::string(), Side::string(), PackageName::string(), PackageVsn::string()) -> 
+%%        string()
+%% @end 
+%%--------------------------------------------------------------------
+checksum_file_suffix(ErtsVsn, Side, PackageName, PackageVsn) when is_list(PackageVsn) ->
+    lists:flatten([package_vsn_suffix(ErtsVsn, "Meta", Side, PackageName, PackageVsn), "/", "checksum"]).
+
+%%--------------------------------------------------------------------
+%% @doc Returns the suffix pointing to the checksum file stored in the repo for an erts package.
+%% @spec erts_checksum_file_suffix(ErtsVsn::string(), Area::string()) -> string()
+%% @end 
+%%--------------------------------------------------------------------
+erts_checksum_file_suffix(ErtsVsn, Area) ->
+    lists:flatten([area_suffix(ErtsVsn, Area), "/", "checksum"]).
 
 %%====================================================================
 %% Other External Functions

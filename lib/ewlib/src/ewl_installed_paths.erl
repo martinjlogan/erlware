@@ -15,7 +15,7 @@
 %%--------------------------------------------------------------------
 -export([
 	 application_container_path/2,
-	 erts_container_path/1,
+	 erts_container_path/2,
 	 executable_container_path/1,
 	 release_file_container_path/3,
 	 release_container_path/1
@@ -48,7 +48,7 @@ release_container_path(InstallationPath) ->
 %% @end
 %%--------------------------------------------------------------------
 application_container_path(InstallationPath, ErtsVsn) ->
-    filename:join([InstallationPath, "application_packages", ErtsVsn, "lib"]).
+    filename:join([InstallationPath, "packages", ErtsVsn, "lib"]).
 
 %%--------------------------------------------------------------------
 %% @doc Returns a path to the directory where executable files sit. 
@@ -60,11 +60,11 @@ executable_container_path(InstallationPath) when is_list(InstallationPath) ->
 
 %%--------------------------------------------------------------------
 %% @doc Returns a path to the directory under which all the erts packages lie.
-%% @spec erts_container_path(InstallationPath) -> string()
+%% @spec erts_container_path(InstallationPath, ErtsVsn) -> string()
 %% @end
 %%--------------------------------------------------------------------
-erts_container_path(InstallationPath) -> 
-    lists:flatten([InstallationPath, "/erts_packages/"]).
+erts_container_path(InstallationPath, ErtsVsn) -> 
+    filename:join([InstallationPath, "packages", ErtsVsn]).
 
 %%--------------------------------------------------------------------
 %% @doc Returns a path to the directory under which the release file sits.
@@ -84,7 +84,7 @@ release_file_container_path(InstallationPath, RelName, RelVsn) ->
 %% @end
 %%--------------------------------------------------------------------
 installed_erts_path(InstallationPath, ErtsVsn) when is_list(ErtsVsn) -> 
-    lists:flatten([erts_container_path(InstallationPath), "erts-",  ErtsVsn]).
+    lists:flatten([erts_container_path(InstallationPath, ErtsVsn), "/erts-",  ErtsVsn]).
 
 %%--------------------------------------------------------------------
 %% @doc Returns a full installaed application path i.e underneith this directory lies the src and ebin dirs.
