@@ -355,7 +355,8 @@ fetch_from_repos([Repo | Rest], PosLocations, TarName, To, Timeout) ->
     case catch fetch_from_repo(Repo, PosLocations, TarName, To, Timeout) of
         ok ->
             ok;
-        _ ->
+        Error ->
+	    error_logger:info_msg("fetch_from_repos/5 fetch failed with ~p trying again at ~p~n", [Error, Rest]),
             fetch_from_repos(Rest, PosLocations, TarName, To, Timeout)
     end;
 fetch_from_repos([], _PosLocations, TarName, _To, _Timeout) ->
@@ -372,8 +373,7 @@ fetch_from_repo(Repo, [Uri | T], TarName, To, Timeout) ->
             fetch_from_repo(Repo, T, TarName, To, Timeout)
     end;
 fetch_from_repo(_Repo, [], TarName, _To, _Timeout) ->
-    throw({not_available, lists:flatten([TarName,
-                                         " not available in repository"])}).
+    throw({not_available, TarName ++ " not available in repository"}).
 
 
 
@@ -424,10 +424,13 @@ write_data(Data, To) ->
 %% @private
 %%-------------------------------------------------------------------
 handle_tar_file(To, ActualTo) ->
+    error_logger:info_msg("ewr_fetch:handle_tar_file writing to ~p -> ~p~n", [ActualTo, To]),
     Cmd = lists:flatten(["tar -xzf ", ewr_util:handle_cygwin_path(ActualTo), " -C ", ewr_util:handle_cygwin_path(To)]),
     case os:cmd(Cmd) of
-        [] -> ok;
-        Error -> throw({error, {unable_to_untar, ActualTo}, Error})
+        [] ->
+	    ok;
+        Error ->
+	    throw({error, {unable_to_untar, ActualTo}, Error})
     end,
     file:delete(ewr_util:handle_cygwin_path(ActualTo)),
     ok.
