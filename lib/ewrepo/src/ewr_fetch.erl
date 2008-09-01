@@ -429,8 +429,13 @@ handle_tar_file(To, ActualTo) ->
     case os:cmd(Cmd) of
         [] ->
 	    ok;
-        Error ->
-	    throw({error, {unable_to_untar, ActualTo}, Error})
+        Text ->
+	    case regexp:match(Text, ".*time stamp.*") of
+		{match, _, _} ->
+		    ok;
+		Error ->
+		    throw({error, {unable_to_untar, ActualTo}, Error})
+	    end
     end,
     file:delete(ewr_util:handle_cygwin_path(ActualTo)),
     ok.
