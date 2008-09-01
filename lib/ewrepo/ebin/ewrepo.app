@@ -1,6 +1,6 @@
 {application, ewrepo,
  [{description, "Erlang repository interface"},
-  {vsn, "0.18.2.2"},
+  {vsn, "0.18.2.3"},
   {modules, [ewr_fetch,
              ewr_depends,
              ewr_deps_engine,   
