@@ -42,6 +42,7 @@
 	 mkdir_p/1,
 	 compress/2,
 	 uncompress/1,
+	 uncompress/2,
 	 gsub_file/3
         ]).
 
@@ -135,40 +136,61 @@ mkdir_p(Path) ->
 %% directory that contains it. 
 %% <pre>
 %% Variables:
-%%  TarPathName - The name or path to the file to be produced as a result of the tar command.
-%%  TargetPathName - The path to the directory or file to be compressed.
+%%  TarFilePath - The name or path to the file to be produced as a result of the tar command.
+%%  TargetFilePath - The path to the directory or file to be compressed.
 %%
 %% Examples:
 %%  compress("foo.tar.gz", "tmp/foo")
 %%  compress("/home/martinjlogan/foo.tar.gz", "tmp/foo") % Will put foo.tar.gz into /home/martinjlogan
 %% </pre>
-%% @spec compress(TarPathName::string(), TargetPathName::string()) -> ok | exit()
+%% @spec compress(TarFilePath::string(), TargetFilePath::string()) -> ok | exit()
 %% @end
 %%-------------------------------------------------------------------
-compress(TarPathName, [H|_] = TargetPathName) when is_integer(H)  ->
+compress(TarFilePath, TargetFilePath) ->
     %% Wrapping this just in case we have to go back to os specific code - I am tired of changing this all over the place :) 
-    TarFileName = filename:basename(TarPathName),
-    TargetFileName = filename:basename(TargetPathName),
-    TargetFilePath = filename:dirname(TargetPathName),
+    TarFileName = filename:basename(TarFilePath),
+    TargetFileName = filename:basename(TargetFilePath),
 
     Fun = fun() ->
 		  erl_tar:create(TarFileName, [TargetFileName], [compressed, verbose]),
-		  file:rename(TarFileName, TarPathName)
+		  file:rename(TarFileName, TarFilePath)
 	  end,
-    run_in_location(Fun, TargetFilePath).
+    run_in_location(Fun, filename:dirname(TargetFilePath)).
     
 %%-------------------------------------------------------------------
 %% @doc Uncompress a file or directory using the native os compression system. For linux/unix it is tar. 
 %% <pre>
 %% Variables:
-%%  Name - The name of the file to be produced as a result of the compression.
+%%  TarFileName - The path and name of the tar file to be untarred.
+%%  TargetDirPath - The directory to untar into.
 %% </pre>
-%% @spec uncompress(Name::string()) -> ok | exit()
+%% @spec uncompress(TarFilePath::string(), TargetDirPath::string()) -> ok | exit()
 %% @end
 %%-------------------------------------------------------------------
-uncompress(Name) ->
+uncompress(TarFilePath, TargetDirPath) ->
     %% Wrapping this just in case we have to go back to os specific code - I am tired of changing this all over the place :) 
-    ok = erl_tar:extract(Name, [compressed, verbose]).
+    TarFileName = filename:basename(TarFilePath),
+    RelocatedTarFilePath = filename:join(TargetDirPath, TarFileName),
+    case TarFilePath == RelocatedTarFilePath of
+	false -> file:rename(TarFilePath, RelocatedTarFilePath);
+	true  -> ok
+    end,
+    error_logger:info_msg("ewl_file:uncompress ~s in ~s~n", [TarFileName, TargetDirPath]),
+    Fun = fun() ->
+		  ok = erl_tar:extract(TarFileName, [compressed]),
+		  case TarFilePath == RelocatedTarFilePath of
+		      true  -> file:delete(TarFileName);
+		      false -> ok
+		  end
+	  end,
+    run_in_location(Fun, TargetDirPath).
+    
+    
+%% @spec uncompress(TarFilePath::string()) -> ok | exit()
+%% @equiv uncompress(TarFilePath, CurrentWorkingDirectory) 
+uncompress(TarFilePath) ->
+    {ok, CWD} = file:get_cwd(),
+    uncompress(TarFilePath, CWD).
     
     
 %%-------------------------------------------------------------------

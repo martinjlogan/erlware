@@ -425,17 +425,12 @@ write_data(Data, To) ->
 %%-------------------------------------------------------------------
 handle_tar_file(To, ActualTo) ->
     error_logger:info_msg("ewr_fetch:handle_tar_file writing to ~p -> ~p~n", [ActualTo, To]),
-    Cmd = lists:flatten(["tar -xzf ", ewr_util:handle_cygwin_path(ActualTo), " -C ", ewr_util:handle_cygwin_path(To)]),
-    case os:cmd(Cmd) of
-        [] ->
-	    ok;
-        Text ->
-	    case regexp:match(Text, ".*time stamp.*") of
-		{match, _, _} ->
-		    ok;
-		_Error ->
-		    throw({error, {unable_to_untar, ActualTo}, Text})
-	    end
+    try ewl_file:uncompress(ActualTo, To) of
+	ok ->
+	    ok
+    catch 
+        _Class:Exception ->
+	    throw({error, {unable_to_untar, ActualTo}, Exception})
     end,
     file:delete(ewr_util:handle_cygwin_path(ActualTo)),
     ok.
