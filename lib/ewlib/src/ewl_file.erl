@@ -127,18 +127,35 @@ mkdir_p(Path) ->
     end.
 
 %%-------------------------------------------------------------------
-%% @doc Compress a file or directory using the native os compression system. For linux/unix it is tar. 
+%% @doc Compress a file or directory using the native os compression
+%% system. For linux/unix it is tar. The semantics of this function
+%% are very straight forward. Indicate where you want the tar file
+%% to be placed and indicate what file you want to tar up. This will
+%% do that. It will tar the target file as if it was doing it from
+%% directory that contains it. 
 %% <pre>
 %% Variables:
-%%  Name - The name of the file to be produced as a result of the compression.
-%%  Path - The path to the directory or file to be compressed.
+%%  TarPathName - The name or path to the file to be produced as a result of the tar command.
+%%  TargetPathName - The path to the directory or file to be compressed.
+%%
+%% Examples:
+%%  compress("foo.tar.gz", "tmp/foo")
+%%  compress("/home/martinjlogan/foo.tar.gz", "tmp/foo") % Will put foo.tar.gz into /home/martinjlogan
 %% </pre>
-%% @spec compress(Name::string(), Path::string()) -> ok | exit()
+%% @spec compress(TarPathName::string(), TargetPathName::string()) -> ok | exit()
 %% @end
 %%-------------------------------------------------------------------
-compress(Name, Path) ->
+compress(TarPathName, [H|_] = TargetPathName) when is_integer(H)  ->
     %% Wrapping this just in case we have to go back to os specific code - I am tired of changing this all over the place :) 
-    ok = erl_tar:create(Name, [Path], [compressed, verbose]).
+    TarFileName = filename:basename(TarPathName),
+    TargetFileName = filename:basename(TargetPathName),
+    TargetFilePath = filename:dirname(TargetPathName),
+
+    Fun = fun() ->
+		  erl_tar:create(TarFileName, [TargetFileName], [compressed, verbose]),
+		  file:rename(TarFileName, TarPathName)
+	  end,
+    run_in_location(Fun, TargetFilePath).
     
 %%-------------------------------------------------------------------
 %% @doc Uncompress a file or directory using the native os compression system. For linux/unix it is tar. 
@@ -238,6 +255,20 @@ ensure_leading_slash(String) ->
 %%--------------------------------------------------------------------
 remove_trailing_slash(String) ->
     string:strip(String, right, $/).
+
+%%--------------------------------------------------------------------
+%% @doc run the fun provided in the directory provided.
+%% @spec run_in_location(Fun, Path) -> term()
+%% where
+%%  Paths = string()
+%% @end
+%%--------------------------------------------------------------------
+run_in_location(Fun, Path) ->
+    {ok, CWD} = file:get_cwd(),
+    ok = file:set_cwd(Path),
+    Result = Fun(),
+    ok = file:set_cwd(CWD),
+    Result.
 
 %%%====================================================================
 %%% Unit Tests
