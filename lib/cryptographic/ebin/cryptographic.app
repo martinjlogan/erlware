@@ -5,7 +5,7 @@
   {description, "Provides cryptographic functionality written in pure Erlang i.e no dependency on non-erlang code."},
 
   % The version of the applicaton
-  {vsn, "0.2.0"},
+  {vsn, "0.2.1"},
 
   % All modules used by the application.
   {modules,
