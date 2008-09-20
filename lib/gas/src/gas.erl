@@ -214,6 +214,7 @@ get_env(Key) ->
 set_env(Application, Key, Val) ->
     application:set_env(Application, Key, Val).
 
+
 %%--------------------------------------------------------------------
 %% @doc Alters the configuration file by inserting or overwriting a key value pair for a particular application.
 %% <pre>
@@ -225,21 +226,66 @@ set_env(Application, Key, Val) ->
 %% </pre>
 %%
 %% @spec
-%%  modify_config_file(FileLocation, AppGroup, Key, Val) -> ok | {error, Reason}
+%%  modify_config_file(FileLocation, AppGroup, Key, Val) -> ok 
 %% where
 %%  AppGroup = term()
 %%  Key = term()
 %%  Value = term()
-%%  Reason = no_such_config_entry
 %% @end
 %%--------------------------------------------------------------------
-modify_config_file(FileLocation, AppGroup, Key, Val) ->
-    case gas:get_env(AppGroup, Key, undefined) of
-	{ok, undefined} -> 
+modify_config_file([H|_] = FileLocation, AppGroup, Key, Val) when is_integer(H) ->
+    case gas:get_env(AppGroup, Key) of
+	undefined -> 
 	    write_out_key_group(FileLocation, AppGroup, Key),
 	    write_out_entry(FileLocation, AppGroup, Key, Val);
 	{ok, _Value} ->
 	    write_out_entry(FileLocation, AppGroup, Key, Val) 
+    end;
+
+%%--------------------------------------------------------------------
+%% @doc Alters the configuration file by inserting or overwriting a
+%%      key value pair for a particular application. The function tests
+%%      all config files supplied for the value and modifies the first
+%%      file where the value is present.  If the value is not present
+%%      in any of the files the first file receives the value. 
+%% <pre>
+%% Expects:
+%%  AppGroup - The application grouping to be outputd.
+%%  Key      - The Key of the value to be inserted
+%%  Val      - The value to be inserted.
+%% </pre>
+%%
+%% @spec
+%%  modify_config_file(FileLocations, AppGroup, Key, Val) -> ok 
+%% where
+%%  FileLocations = [string()]
+%%  AppGroup = term()
+%%  Key = term()
+%%  Value = term()
+%% @end
+%%--------------------------------------------------------------------
+modify_config_file(FileLocations, AppGroup, Key, Val) ->
+    FileLocation = 
+	lists:foldl(fun(FilePath, TargetPath) ->
+			    try proplists:get_value(Key, proplists:get_value(AppGroup, read_config_file(FilePath))) of
+				undefined ->
+				    TargetPath;
+				_Value ->
+				    case TargetPath of
+					undefined -> FilePath;
+					_         -> TargetPath
+				    end
+			    catch
+				_C:_E -> TargetPath
+			    end
+		    end,
+		    undefined,
+		    FileLocations),
+    case FileLocation of
+	undefined ->
+	    modify_config_file(hd(FileLocations), AppGroup, Key, Val);
+	FileLocation ->
+	    modify_config_file(FileLocation, AppGroup, Key, Val) 
     end.
 
 write_out_entry(FileLocation, AppGroup, Key, Val) ->
@@ -258,15 +304,22 @@ substitute_entry([], _AppGroup, _Key, _Value) ->
     [].
 
 write_out_key_group(FileLocation, AppGroup, Key) ->
-    {ok, [Terms]} = file:consult(FileLocation),
-    NewTerms = lists:foldr(
-		 fun({AppGroup_, GroupBody}, Acc) when AppGroup == AppGroup_ -> [{AppGroup, [{Key, []}|GroupBody]}|Acc];
-		    (AppGroup_, Acc)                                          -> [AppGroup_|Acc]
-		 end,
-		 [], Terms),
+    Terms = read_config_file(FileLocation),
+    ModdedTerms = lists:foldr(
+		    fun({AppGroup_, GroupBody}, Acc) when AppGroup == AppGroup_ ->
+			    [{AppGroup, [{Key, []}|GroupBody]}|Acc];
+		       (AppGroup_, Acc) ->
+			    [AppGroup_|Acc]
+		    end,
+		    [], Terms),
+
+    NewTerms = 
+	case ModdedTerms == Terms of
+	    true  -> [{AppGroup, [{Key, []}]}|Terms];
+	    false -> ModdedTerms
+	end,
     {ok, IOD}   = file:open(FileLocation, [write]),
     io:fwrite(IOD, "~p. ~n", [NewTerms]).
-    
 
 %%--------------------------------------------------------------------
 %% @doc Modify the value of a config entry with a fun. The fun will take the old value and return a new one.
@@ -438,3 +491,10 @@ convert_list_string_type ([ValueHead | ValueTail]) when list (ValueHead) ->
 convert_list_string_type (_) ->
     {ok, ""}.
 
+read_config_file(OverrideFilePath) ->
+    case file:consult(OverrideFilePath) of
+	{ok, [ConfigList]} ->
+	    ConfigList;
+	{error, enoent} ->
+	    []
+    end.

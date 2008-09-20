@@ -5,13 +5,14 @@
   {description, "Basic services for a release"},
 
   % The version of the applicaton
-  {vsn, "5.3.0"},
+  {vsn, "5.6.7"},
 
   % All modules used by the application.
   {modules,
    [
     gas,
-    gas_sup
+    gas_sup,
+    gas_override_config
    ]},
 
   % All of the registered names the application uses.

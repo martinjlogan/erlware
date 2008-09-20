@@ -84,7 +84,13 @@ init([]) ->
 
     case gas:get_env(gas, mod_specs) of
         {ok, ModSpecs} -> 
-            {ok,{SupFlags, create_child_specs(ModSpecs)}};
+            {ok,{SupFlags,
+		 [{gas_override_config,
+		   {gas_override_config, start_link, []},
+		   temporary,
+		   200,
+		   worker,
+		   [gas_override_config]} | create_child_specs(ModSpecs)]}};
         undefined -> 
             ignore
     end.
