@@ -312,7 +312,9 @@ stop_heartbeat() ->
 %%  -contact_node foo@bar.com
 %% </code>
 %%
-%% @spec contact_nodes() -> pong | pang | no_contact_node
+%% @spec contact_nodes(Timeout) -> pong | pang | no_contact_node
+%% where
+%%  Timeout = Milliseconds::integer()
 %% @end
 %%------------------------------------------------------------------------------
 contact_nodes(Timeout) ->
@@ -324,16 +326,20 @@ contact_nodes(Timeout) ->
 	    _ ->
 		gas:get_env(resource_discovery, contact_nodes, [])
 	end,
-    ping_contact_nodes(ContactNodes).
-contact_nodes(10000) ->
+    ping_contact_nodes(ContactNodes, Timeout).
 
-ping_contact_nodes([]) ->
+%% @spec contact_nodes() -> pong | pang | no_contact_node
+%% @equiv contact_nodes(10000)
+contact_nodes() ->
+    contact_nodes(10000).
+
+ping_contact_nodes([], _Timeout) ->
     ?INFO_MSG("No contact node specified. Potentially running in a standalone node~n", []),
     no_contact_node;
-ping_contact_nodes(Nodes) ->
+ping_contact_nodes(Nodes, Timeout) ->
     fs_lists:do_until(fun(Node) ->
 			   ?INFO_MSG("ping contact node at ~p~n", [Node]),
-			   case ping_node(Node) of
+			   case ping_node(Node, Timeout) of
 			       pong ->
 				   ?INFO_MSG("ping contact node at ~p succeeded~n", [Node]),
 				   pong;
@@ -345,8 +351,8 @@ ping_contact_nodes(Nodes) ->
 		   pong,
 		   Nodes).
 				   
-ping_node(Node) ->
-    case fs_net:sync_ping(Node) of
+ping_node(Node, Timeout) ->
+    case fs_net:sync_ping(Node, Timeout) of
 	pang ->
 	    {error, badcontactnode};
 	pong ->
