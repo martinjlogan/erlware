@@ -108,11 +108,7 @@ async_inform(Node, TargetTypes, LocalResources) ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    case resource_discovery:contact_nodes() of
-	no_contact_node -> ok;
-	pong            -> ok
-    end,
-    
+    ?INFO_MSG("~n", []),
     {ok, #state{resources = rd_store:lookup_resource_struct(), callback_list = rd_store:lookup_callback_modules()}}.
 
 %%--------------------------------------------------------------------
@@ -210,6 +206,7 @@ handle_info(_Info, State) ->
 %% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, _State) ->
+    ?INFO_MSG("", []),
     ok.
 
 %%--------------------------------------------------------------------

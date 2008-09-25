@@ -5,13 +5,14 @@
   {description, "Resource discovery & management"},
 
   % The version of the applicaton
-  {vsn, "0.1.0.0"},
+  {vsn, "0.1.1.0"},
 
   % All modules used by the application.
   {modules,
    [
     	resource_discovery,
 	rd_core,
+	rd_heartbeat,
 	rd_store,
 	rd_sup
    ]},

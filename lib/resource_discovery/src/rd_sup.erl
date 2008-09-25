@@ -14,9 +14,7 @@
 %% External exports
 %%--------------------------------------------------------------------
 -export([
-         start_link/1,
-         start_heartbeat/1,
-         stop_heartbeat/0
+         start_link/1
         ]).
 
 %%--------------------------------------------------------------------
@@ -47,33 +45,6 @@
 start_link(_) ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
-%%--------------------------------------------------------------------
-%% @doc Starts the heartbeat process and adds it to the supervision tree.
-%% <pre>
-%% Types: 
-%%  Name = atom()
-%%  Frequency = integer()
-%%
-%% Note:
-%% * requency, is the frequency, in mili seconds, for which 
-%%   resource_monitor:inform_network/0 is called.
-%% </pre>
-%% @spec start_heartbeat(Frequency) -> void()
-%% @end
-%%--------------------------------------------------------------------
-start_heartbeat(Frequency) ->
-    supervisor:start_child(rd_sup,
-			   {?HEART, {rd_heartbeat, start_link, [Frequency]},
-			    permanent, 500, worker, [rd_heartbeat]}).
-%%--------------------------------------------------------------------
-%% @doc Stops the hearbeat.
-%% @spec stop_heartbeat() -> ok
-%% @end
-%%--------------------------------------------------------------------
-stop_heartbeat() ->
-    supervisor:terminate_child(rd_sup, ?HEART),
-    supervisor:delete_child(rd_sup, ?HEART).
-
 %%====================================================================
 %% Server functions
 %%====================================================================
@@ -97,12 +68,18 @@ init([]) ->
 
     ChildSpecs = 
         [ 
-          {resource_discovery,
+          {rd_core,
            {rd_core, start_link, []},
            permanent,
            1000,
            worker,
-           [resource_discovery]}
+           [rd_core]},
+          {rd_heartbeat,
+           {rd_heartbeat, start_link, []},
+           transient,
+           brutal_kill,
+           worker,
+           [rd_heartbeat]}
          ],
 
     {ok, {SupFlags, ChildSpecs}}.
