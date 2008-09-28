@@ -1,10 +1,9 @@
 %%%-------------------------------------------------------------------
-%%% @author Martin Logan <martinjlogan@Macintosh.local>
-%%% @copyright (C) 2008, Martin Logan
+%%% @author Martin Logan 
+%%% @copyright 2008 Erlware
 %%% @doc
 %%%   Cache and distribute resources.
 %%% @end
-%%% Created : 17 Sep 2008 by Martin Logan <martinjlogan@Macintosh.local>
 %%%-------------------------------------------------------------------
 -module(rd_core).
 
@@ -53,7 +52,7 @@ store_resources(Node, Resources) ->
     gen_server:cast({?SERVER, Node}, {store_resources, Resources}).
 
 %% @spec (Resources) -> ok
-%% @equiv (node(), Resources) 
+%% @equiv store_resources(node(), Resources) 
 store_resources(Resources) ->
     store_resources(node(), Resources).
 
@@ -73,7 +72,7 @@ inform(Node, TargetTypes, LocalResources, Timeout) ->
     gen_server:call({?SERVER, Node}, {inform, {TargetTypes, LocalResources}}, Timeout).
 
 %% @spec (Node, TargetTypes, LocalResources) -> {ok, RemoteResources}
-%% @equiv (Node, TargetTypes, LocalResources, 60000) 
+%% @equiv inform(Node, TargetTypes, LocalResources, 60000) 
 inform(Node, TargetTypes, LocalResources) ->
     inform(Node, TargetTypes, LocalResources, 60000).
 

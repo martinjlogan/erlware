@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%% File    : resource_discovery.erl
-%%% Author  : Martin J. Logan <martin@gdubya.botomayo>
+%%% Author  : Martin J. Logan <martinjlogan@erlware.org>
 %%% @doc 
 %%%
 %%% @type resource() = {resource_type(), resource_instance()}. The type of a resource followed by its identifier. Local
@@ -10,9 +10,9 @@
 %%%       a type of service that you have on the network may be identified by it's node name
 %%%       in which case you might have a resource type of 'my_service' of which there may be
 %%%       many node names representing resources such as {my_service, myservicenode@myhost}. 
-%%% @type resource_instance() = {name, node()} | atom() | messageable_resource_instance(). A resource
-%%% identifier or resource itself. Typicaly something that can be messaged directly with "!" but can be any term.
-%%% @type messageable_resource_instance() = node() | pid(). A resource that is directly messageable via "!". 
+%%% @type resource_instance() =  term() | messageable_resource_instance(). The resource being managed
+%%%       Typicaly something that can be messaged directly with "!" but can be any term.
+%%% @type messageable_resource_instance() = {name, node()} | node() | pid(). A resource that is directly messageable via "!". 
 %%% @end
 %%%-------------------------------------------------------------------
 -module(resource_discovery).
@@ -44,7 +44,7 @@
          get_contact_nodes/0
         ]).
 
-% Remove
+% Delete
 -export([
          delete_local_resource/1,
          delete_target_type/1,
@@ -52,13 +52,12 @@
          delete_resource/1 
         ]).
 
+% Other
 -export([
+         inform_network/1,
          inform_network/0,
          async_inform_network/0,
          contact_nodes/0,
-         start_heartbeat/0,
-         start_heartbeat/1,
-         stop_heartbeat/0,
          execute_with_resource/2,
          execute_with_same_resource/2,
          rpc_call_with_discovery/4
@@ -123,7 +122,7 @@ add_callback_modules(Modules) ->
     rd_store:store_callback_modules(Modules).
 
 %%------------------------------------------------------------------------------
-%% @doc Returns a resource.
+%% @doc Returns a cached resource.
 %% @spec (Type) -> {ok, resource_instance()} | {error, no_resources}
 %% @end
 %%------------------------------------------------------------------------------
@@ -131,7 +130,7 @@ get_resource(Type) ->
     gen_server:call(?RD, {get_resource, Type}). 
 
 %%------------------------------------------------------------------------------
-%% @doc Replies with the resource at the index specified. If for example we had
+%% @doc Replies with the cached resource at the index specified. If for example we had
 %%      a list of resources that looked like {R1, R2, R3} and index 2 was
 %%      requested the user would receive R2.
 %% @spec (resource_type(), Index::integer()) -> {ok, resource_instance()} | {error, no_resources}
@@ -141,7 +140,7 @@ get_resource(Type, Index) ->
     gen_server:call(?RD, {get_resource, Type, Index}). 
 
 %%------------------------------------------------------------------------------
-%% @doc Returns ALL resources for a particular type.
+%% @doc Returns ALL cached resources for a particular type.
 %% @spec get_all_resources(type()) -> {ok, [resource_instance()]}
 %% @end
 %%------------------------------------------------------------------------------
@@ -149,7 +148,7 @@ get_all_resources(Type) ->
     gen_server:call(?RD, {get_all_resources, Type}). 
 
 %%------------------------------------------------------------------------------
-%% @doc Removes a resource from the resource pool. Only returns after the
+%% @doc Removes a cached resource from the resource pool. Only returns after the
 %%      resource has been deleted.
 %% @spec delete_resource(resource_type(), resource_instance()) -> ok
 %% @end
@@ -163,7 +162,7 @@ delete_resource({Type, Instance}) ->
     delete_resource(Type, Instance).
 
 %%------------------------------------------------------------------------------
-%% @doc Counts a particular resource type.
+%% @doc Counts the cached instances of a particular resource type.
 %% @spec get_num_resource(type()) -> {ok, integer()}
 %% @end
 %%------------------------------------------------------------------------------
@@ -187,7 +186,7 @@ delete_local_resource(LocalResource) ->
     rd_store:delete_local_resource(LocalResource).
 
 %%------------------------------------------------------------------------------
-%% @doc Gets a list of the types that are being managed.
+%% @doc Gets a list of the types that have resources that have been cached.
 %% @spec () -> [resource_type()]
 %% @end
 %%------------------------------------------------------------------------------
@@ -195,7 +194,7 @@ get_types() ->
     gen_server:call(?RD, get_types). 
 
 %%------------------------------------------------------------------------------
-%% @doc Gets the number of resource types locally known.
+%% @doc Gets the number of resource types locally cached.
 %% @spec get_num_types() -> integer()
 %% @end
 %%------------------------------------------------------------------------------
@@ -205,11 +204,16 @@ get_num_types() ->
 %%------------------------------------------------------------------------------
 %% @doc inform the network of your existance and all the resources that are
 %%      provided by the local node as well as all the target types that the local
-%%      instance of Resource Discovery would like to know about.
-%% @spec inform_network() -> ok | exit(Reason)
+%%      instance of Resource Discovery would like to know about. Returns only
+%%      after all nodes have been transacted with.
+%% @spec inform_network(Timeout) -> ok | exit(Reason)
+%% where
+%%  Timeout = Milliseconds::integer()
 %% @end
 %%------------------------------------------------------------------------------
-inform_network() ->
+inform_network(Timeout) ->
+    Nodes = [node()|nodes()],
+    ?INFO_MSG("initiating a syncronous inform network with a timeout of ~p to nodes ~p~n", [Timeout, Nodes]),
     LocalResources = rd_store:lookup_local_resources(),
     TargetTypes    = rd_store:lookup_target_types(),
     Self = self(),
@@ -222,10 +226,20 @@ inform_network() ->
 						       rd_core:inform(Node, TargetTypes, LocalResources)}
 				       end)}
 		  end,
-		  [node()|nodes()]),
-    {ok, {Resources, Errors}} = wait_on_responses(NodePidList, 60000),
-    ?INFO_MSG("Errors found were: ~p~n", [Errors]),
+		  Nodes),
+    {ok, {Resources, Errors}} = wait_on_responses(NodePidList, Timeout),
+
+    case Errors of
+	[] -> ok;
+	Errors -> ?INFO_MSG("Responses returned and errors found: ~p~n", [Errors])
+    end,
+
     rd_core:store_resources(Resources).
+
+%% @spec inform_network() -> ok | exit(Reason)
+%% @equiv inform_network(10000)
+inform_network() ->
+    inform_network(10000).
      
 
 wait_on_responses(NodePidList, Timeout) ->
@@ -252,7 +266,7 @@ wait_on_responses(NodePidList, ResourceAcc, ErrorAcc, Timeout) ->
 %%------------------------------------------------------------------------------
 %% @doc inform the network asyncronously of your existance and all the resources 
 %%      that are provided by the local node as well as all the target types that
-%%      the localinstance of Resource Discovery would like to know about.
+%%      the local instance of Resource Discovery would like to know about.
 %% @spec () -> ok | exit(Reason)
 %% @end
 %%------------------------------------------------------------------------------
@@ -261,44 +275,6 @@ async_inform_network() ->
     TargetTypes    = rd_store:lookup_target_types(),
     lists:foreach(fun(Node) -> rd_core:async_inform(Node, TargetTypes, LocalResources) end, [node()|nodes()]).
 
-%%------------------------------------------------------------------------------
-%% @doc Starts the resource discovery heartbeat process.
-%% <pre>
-%%
-%% Causes the resource_discovery to perform a periodic 
-%% resource_discovery:inform_network
-%%
-%% Note: This can also be a configuration option. 
-%% <code>
-%%    {heartbeat, {bool(), MiliSeconds}},
-%% </code>
-%%
-%% Note: If no time is specified the time defaults to 60000 ms, or one minute.
-%%
-%% Types: 
-%%  MiliSeconds = integer()
-%%
-%% </pre>
-%%
-%% @spec start_heartbeat(MiliSeconds) -> void() 
-%% @end
-%%------------------------------------------------------------------------------
-start_heartbeat(MiliSeconds) ->
-    rd_sup:start_heartbeat(MiliSeconds).
-
-%% @spec start_heartbeat() -> void() 
-%% @equiv start_heartbeat(MiliSeconds)
-start_heartbeat() ->
-    start_heartbeat(60000).
-
-%%------------------------------------------------------------------------------
-%% @doc Stops the heart beat process.
-%% @spec stop_heartbeat() -> void()
-%% @end
-%%------------------------------------------------------------------------------
-stop_heartbeat() ->
-    rd_sup:stop_heartbeat().
-    
 %%------------------------------------------------------------------------------
 %% @doc Contacts resource discoveries initial contact node.
 %%
@@ -370,7 +346,7 @@ get_contact_nodes() ->
     gas:get_env(resource_discovery, contact_nodes).
     
 %%------------------------------------------------------------------------------
-%% @doc Execute a fun on a resource until it returns true or there are no more resources.
+%% @doc Execute a fun on a cached resource until it returns true or there are no more resources.
 %% If the fun returns false the resource that caused the failure will be deleted from the
 %% cache of available resources. This function uses the function get_resource/1.
 %% This is a convenience function.
@@ -398,7 +374,7 @@ execute_with_resource(Type, Fun) ->
     end.
 
 %%------------------------------------------------------------------------------
-%% @doc Execute a fun on a resource until it returns true or there are no more resources.
+%% @doc Execute a fun on a cached resource until it returns true or there are no more resources.
 %% If the fun returns false the resource that caused the failure will be deleted from the
 %% cache of available resources. This function uses the function get_resource/2.
 %% This is a convenience function.
@@ -426,14 +402,14 @@ execute_with_same_resource(Type, Fun) ->
     end.
 
 %%------------------------------------------------------------------------------
-%% @doc Execute an rpc on a resource.  If the result of the rpc is {badrpc, reason} the 
+%% @doc Execute an rpc on a cached resource.  If the result of the rpc is {badrpc, reason} the 
 %%      resource is deleted and the next resource is tried, else the result is 
 %%      returned to the user.
 %% <pre>
 %% Varibles:
 %%  Type - The resource type to get from resource discovery.
 %% </pre>
-%% @spec rpc_with_discovery(Type, Module, Function, Args) -> RPCResult | {error, no_resources}
+%% @spec (Type, Module, Function, Args) -> RPCResult | {error, no_resources}
 %% @end
 %%------------------------------------------------------------------------------
 rpc_call_with_discovery(Type, Module, Function, Args) ->
@@ -452,3 +428,5 @@ rpc_call_with_discovery(Type, Module, Function, Args) ->
         {error, no_resources} -> 
 	    {error, no_resources}
     end.
+
+
