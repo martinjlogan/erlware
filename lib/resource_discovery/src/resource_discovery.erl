@@ -273,7 +273,9 @@ wait_on_responses(NodePidList, ResourceAcc, ErrorAcc, Timeout) ->
 async_inform_network() ->
     LocalResources = rd_store:lookup_local_resources(),
     TargetTypes    = rd_store:lookup_target_types(),
-    lists:foreach(fun(Node) -> rd_core:async_inform(Node, TargetTypes, LocalResources) end, [node()|nodes()]).
+    Nodes          = [node()|nodes()],
+    ?INFO_MSG("initiating aasyncronous inform network to nodes ~p~n", [Nodes]),
+    lists:foreach(fun(Node) -> rd_core:async_inform(Node, TargetTypes, LocalResources) end, Nodes).
 
 %%------------------------------------------------------------------------------
 %% @doc Contacts resource discoveries initial contact node.
@@ -288,7 +290,7 @@ async_inform_network() ->
 %%  -contact_node foo@bar.com
 %% </code>
 %%
-%% @spec contact_nodes(Timeout) -> pong | pang | no_contact_node
+%% @spec contact_nodes(Timeout) -> ok | {error, bad_contact_node} | {error, no_contact_node}
 %% where
 %%  Timeout = Milliseconds::integer()
 %% @end
@@ -311,30 +313,20 @@ contact_nodes() ->
 
 ping_contact_nodes([], _Timeout) ->
     ?INFO_MSG("No contact node specified. Potentially running in a standalone node~n", []),
-    no_contact_node;
+    {error, no_contact_node};
 ping_contact_nodes(Nodes, Timeout) ->
     fs_lists:do_until(fun(Node) ->
-			   ?INFO_MSG("ping contact node at ~p~n", [Node]),
-			   case ping_node(Node, Timeout) of
-			       pong ->
-				   ?INFO_MSG("ping contact node at ~p succeeded~n", [Node]),
-				   pong;
-			       Error ->
-				   ?INFO_MSG("ping contact node at ~p failed~n", [Node]), 
-				   Error
-			   end
-		   end,
-		   pong,
-		   Nodes).
-				   
-ping_node(Node, Timeout) ->
-    case fs_net:sync_ping(Node, Timeout) of
-	pang ->
-	    {error, badcontactnode};
-	pong ->
-	    pong
-    end.
-    
+			      case fs_net:sync_ping(Node, Timeout) of
+				  pong ->
+				      ok;
+				  pang ->
+				      ?INFO_MSG("ping contact node at ~p failed~n", [Node]), 
+				      {error, bad_contact_node}
+			      end
+		      end,
+		      ok,
+		      Nodes).
+
 %%------------------------------------------------------------------------------
 %% @doc Get the contact node for the application.
 %% @spec get_contact_nodes() -> {ok, Value} | undefined

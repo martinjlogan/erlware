@@ -68,7 +68,6 @@ store_resources(Resources) ->
 %% @end
 %%--------------------------------------------------------------------
 inform(Node, TargetTypes, LocalResources, Timeout) ->
-    ?INFO_MSG("inform ~p of target types ~p and local resources ~p~n", [Node, TargetTypes, LocalResources]),
     gen_server:call({?SERVER, Node}, {inform, {TargetTypes, LocalResources}}, Timeout).
 
 %% @spec (Node, TargetTypes, LocalResources) -> {ok, RemoteResources}
@@ -88,7 +87,6 @@ inform(Node, TargetTypes, LocalResources) ->
 %% @end
 %%--------------------------------------------------------------------
 async_inform(Node, TargetTypes, LocalResources) ->
-    ?INFO_MSG("async inform ~p of target types ~p and local resources ~p~n", [Node, TargetTypes, LocalResources]),
     gen_server:cast({?SERVER, Node}, {async_inform, {node(), TargetTypes, LocalResources}}).
 
 %%%===================================================================
