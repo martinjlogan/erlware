@@ -91,7 +91,7 @@ Finally to use a resource from the resource cache Resource Discovery provides a 
 <h2>Getting into an Erlang Cloud</h2>
 
 <p>
-Getting into an Erlang node cloud is required as a minimal bootstrap for Resource Discovery.  To accomplish initial contact by pinging remote nodes already in the desired cloud something similar to the following entries should be in your Erlang config file. 
+Getting into an Erlang node cloud is required as a minimal bootstrap for Resource Discovery.  To accomplish initial contact by pinging remote nodes already in the desired cloud something similar to the following entries should be in your Erlang config file. If you already have a resource discovery entry in your config file there is no need to add a new one, you should in that case just add the contact_nodes entry into the already existant resource_discovery section of the config.
 </p>
 
 ```
@@ -112,6 +112,24 @@ These entries instruct resource discovery to ping node1 and node2 in order to jo
 
 <p>
 The above flag set at startup would instruct Resource Discovery to ping node3 instead of those configured in the config file. In the future a plugin scheme will be added so that other methods of bootstrapping into a cloud may be added. 
+</p>
+
+<h2>Overcomming network and resource failures with heartbeating</h2>
+
+<p>
+At times resources fail and are perhaps taken out of the store of Cached Resources. At other times networks may fail and clouds become separated. One way of overcomming all of this is to setup heartbeats from Resource Discovery. Resource discovery can be configured to heartbeat at a specified interval. This means that it will both re-ping the configured contact nodes and will run an async_inform_network at the specified interval. To enable this place configuration similar to what is below in you Erlang config file. If you already have a resource discovery entry in your config file there is no need to add a new one, you should in that case just add the heartbeat_frequency entry into the already existant resource_discovery section of the config.
+</p>
+
+```
+{resource_discovery, 
+  [
+    {heartbeat_frequency, 60000}    
+  ]
+}
+'''
+
+<p>
+An entry like that above tells Resource Discovery to ping every 60000 milliseconds, or one minute. An entry of 0 disables heartbeating all together and is the default if not configured.
 </p>
 
 <p>
