@@ -13,7 +13,7 @@
 %% API
 -export([
 	 start_link/0,
-	 home_filepath/0
+	 override_file_path/0
 	]).
 
 %% gen_server callbacks
@@ -39,24 +39,40 @@ start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 %%--------------------------------------------------------------------
-%% @doc return a path to a home directory config file if one is configured.
-%% @spec () -> {ok, HomeFilePath} | undefined
+%% @doc return a path to an override config file if one is configured.
+%%      if a file path is added it is used, if the configured file is
+%%      just a name then it is assumed to be under the users home
+%%      directory. If the home_file_path config entry is used instead
+%%      the file is always searched off of the users home dir.
+%% @spec () -> {ok, OverrideFilePath} | undefined
 %% @end
 %%--------------------------------------------------------------------
-home_filepath() ->
-    case gas:get_env(gas, home_filename) of
+override_file_path() ->
+    case gas:get_env(gas, override_file_path) of
 	{ok, OverrideFileName} ->
-	    case os:getenv("HOME") of
-		false ->
-		    error_logger:info_msg("The HOME environment variable is not set~n"),
-		    undefined;
-		Home ->
-		    filename:join(Home, OverrideFileName)
-	    end;
+	    %% @todo for now this only works for unix file paths
+	    case filename:dirname(OverrideFileName) of
+		Res when Res == OverrideFileName orelse Res == "." ->
+		    return_home_file_path(OverrideFileName);
+		_Else ->
+		    {ok, OverrideFileName}
+		end;
 	undefined ->
-	    undefined
+	    case gas:get_env(gas, home_file_path) of
+		undefined          -> undefined;
+		{ok, HomeFilePath} -> return_home_file_path(HomeFilePath)
+	    end
     end.
-    
+
+return_home_file_path(HomeFilePath) ->
+    case os:getenv("HOME") of
+	false ->
+	    error_logger:info_msg("The HOME environment variable is not set~n"),
+	    undefined;
+	Home ->
+	    {ok, filename:join(Home, HomeFilePath)}
+    end.
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -171,10 +187,10 @@ add_config_values(_AppName, [], ShouldContinue) ->
     ShouldContinue.
 
 insert_config_data() ->
-    case home_filepath() of
+    case override_file_path() of
 	undefined ->
 	    ok;
-	OverrideFilePath ->
+	{ok, OverrideFilePath} ->
 	    error_logger:info_msg("performing config override with config from ~s~n", [OverrideFilePath]),
 	    case add_config_values(read_config_file(OverrideFilePath)) of
 		stop ->

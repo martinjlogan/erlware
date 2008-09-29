@@ -4,7 +4,7 @@
 <img src="http://www.martinjlogan.com/images/erlware-header.gif"/>
 
 <p>
-The Resource Discovery application allows you to set up zero conf Erlang clusters.  What this means to you is that producers and consumers can find eachother with no pre configuration needed. For example lets say we have three services in an Erlang cloud of nodes:
+The Resource Discovery application allows you to set up smart Erlang clusters.  Producers and consumers within an Erlang cloud can find eachother with no pre configuration needed. For example lets say we have three services in an Erlang cloud of nodes:
 </p>
 
 <ul>
@@ -14,7 +14,7 @@ The Resource Discovery application allows you to set up zero conf Erlang cluster
 </ul>
 
 <p>
-Each Video Display Agent needs to know about the System Logger. The Video Producer also needs to know about the System Logger and additionally each Video Producer needs to know about each Video Display Agent so that it can broadcast to it. Before understanding how all that is expressed in Resource Discovery we need to get some definitions out of the way.
+Each Video Display Agent needs to know about the System Logger. The Video Producer also needs to know about the System Logger and additionally each Video Producer needs to know about each Video Display Agent so that it can broadcast to each of them. Before understanding how all that is expressed in Resource Discovery we need to get some definitions out of the way.
 </p>
 
 <h2>Definitions</h2>

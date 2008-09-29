@@ -4,13 +4,13 @@
 <img src="http://www.martinjlogan.com/images/erlware-header.gif"/>
 
 <p>
-GAS provides general application services to a release. What is a general application service you may ask? It is a service
-that many applications may want to employ to accomplish some task. Log file rotation and truncation is a good example of such
-a service. A problem can arise from this if more than one application in a release includes a general service that happens
-to use a registered name, or in the case of file rotation, happens to modify a single resource in a non idempotent manner. GAS 
-allows the owner of a release to configure these services to run on a per release basis instead of a per application basis. 
-For example to configure file rotation and trunction with ewl_elwrap_h, which is found in the ewlib application, the release 
-config entries would be the following
+GAS provides general application services and configuration tools to a release.
+</p>
+
+<h2>General Application Services</h2>
+
+<p>
+What is a general application service you may ask? It is a service that many applications may want to employ to accomplish some task. Log file rotation and truncation is a good example of such a service. A problem can arise from this if more than one application in a release includes a general service that happens to use a registered name, or in the case of file rotation, happens to modify a single resource in a non idempotent manner. GAS allows the owner of a release to configure these services to run on a per release basis instead of a per application basis. For example to configure file rotation and trunction with ewl_elwrap_h, which is found in the ewlib application, the release config entries would be the following
 </p>
 
 ```
@@ -19,10 +19,13 @@ config entries would be the following
  {gas,
   [
    %% indicates the module function and optionally args of the services to startup.
+   %% at startup ewl_elwrap_h:start_link() will be called as a result of this entry.
    {mod_specs, [{elwrap, {ewl_elwrap_h, start_link}}]},
    
    %% ewl_elwrap_h specific config. These are specified by the GAS 
    %% configuration_spec/1 callback function within the ewl_elwrap_h module
+   %% Optionally if needed all this config could be supplied directly
+   %% as arts to the mod_spec above.
    {err_log, "/tmp/err_log"},
    {err_log_wrap_info, {{err,5000000,10},{sasl,5000000,10}}},
    {err_log_tty, false}
@@ -31,16 +34,37 @@ config entries would be the following
 '''
 
 <p>
-GAS also has one other important function.  It provides extended support for managing erlang configuration files. The application module provides some basic support but does not give the ability to:
+GAS also has one other important function.  It provides extended support for managing erlang configuration and configuration files. 
 </p>
+
+<h2>Configuration Support</h2>
+
+<p>
+The application module provides the out of the box config support for Erlang applications. It does not however provide a number of critical services. GAS has addressed these gaps. The application module provides some basic support but does not give the ability to:
+</p>
+
 <ul>
   <li>Modify config values at runtime</li>
   <li>Rewrite config files at runtime</li>
   <li>Easily set default config values in your code</li>
+  <li>Allow for config file overriding</li>
 </ul>
+
 <p>
-GAS provides the ability to do these things.
+GAS provides the ability to do these things through its API. Config file overrides are accomplished through the following entry into the config file:
 </p>
+
+```
+{override_file_path, <some-file-path>
+'''
+
+<p>
+The override_file_path should be a path, not just a filename. If only a file name is supplied the file is assumed to be off the users home directory. To specifically configure an override file to be relative to a users home directory can be accomplished using the config entry below.
+</p>
+
+```
+{home_file_path, <some-file-path>
+'''
 
 @author Martin Logan
 @copyright 2007, 2008 Erlware
