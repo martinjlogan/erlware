@@ -46,7 +46,11 @@
 %%   Timeout = Milliseconds::integer() | infinity
 %% @end
 %%-------------------------------------------------------------------
-repo_get(Repo, Suffix, Timeout) ->
+repo_get([$f,$i,$l,$e,$:,$/,$/|Repo] = FullRepo, Suffix, Timeout) ->
+    error_logger:info_msg("ewr_repo_dav:repo_get(~p, ~p, ~p)~n", [FullRepo, Suffix, Timeout]),
+    FilePath = ewl_file:join_paths(Repo, Suffix),
+    file:read_file(FilePath);
+repo_get([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
     error_logger:info_msg("ewr_repo_dav:repo_get(~p, ~p, ~p)~n", [Repo, Suffix, Timeout]),
     URL = ewl_file:join_paths(Repo, Suffix),
     Res =  ibrowse:send_req(URL, [], get, [], [], Timeout),
@@ -77,7 +81,14 @@ repo_get(Repo, Suffix, Timeout) ->
 %%   Timeout = Milliseconds::integer() | infinity
 %% @end
 %%-------------------------------------------------------------------
-repo_put(Repo, Suffix, Payload, Timeout) ->
+repo_put([$f,$i,$l,$e,$:,$/,$/|Repo] = FullRepo, Suffix, Payload, _Timeout) ->
+    FilePath = ewl_file:join_paths(Repo, Suffix),
+    ewl_file:mkdir_p(filename:dirname(FilePath)),
+    case file:write_file(FilePath, Payload) of
+	ok    -> {ok, FullRepo};
+	Error -> Error
+    end;
+repo_put([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Payload, Timeout) ->
     %% Creates the directory structure within the repo.
     repo_mkcol(Repo, filename:dirname(Suffix), Timeout),
     URL = ewl_file:join_paths(Repo, Suffix),
@@ -112,7 +123,13 @@ repo_put(Repo, Suffix, Payload, Timeout) ->
 %%   Timeout = Milliseconds::integer() | infinity
 %% @end
 %%-------------------------------------------------------------------
-repo_mkcol(Repo, Suffix, Timeout) ->
+repo_mkcol([$f,$i,$l,$e,$:,$/,$/|Repo], Suffix, _Timeout) ->
+    try ewl_file:mkdir_p(ewl_file:join_paths(Repo, Suffix)) 
+    catch
+	_C:E ->
+	    {error, E}
+    end;
+repo_mkcol([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
     (catch lists:foldl(fun(PathElement, Acc) -> 
 			       NewAcc = Acc ++ PathElement ++ "/",
 			       URL    = ewl_file:join_paths(Repo, NewAcc),
