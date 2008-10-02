@@ -12,7 +12,7 @@
    [
     	resource_discovery,
 	rd_core,
-	rd_heartbeat,
+	%rd_heartbeat,
 	rd_store,
 	rd_sup
    ]},

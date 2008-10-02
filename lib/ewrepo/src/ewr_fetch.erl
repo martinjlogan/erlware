@@ -149,7 +149,7 @@ fetch_source_packages(Repos, PackageList, To) ->
 %%-------------------------------------------------------------------
 fetch_binary_package(Repos, ErtsVsn, Package, Version, To, Timeout) ->
     SysInfo = ewr_util:system_info(),
-    Areas = create_system_info_series(SysInfo) ++ ["Generic"],
+    Areas = ewr_util:create_system_info_series(SysInfo) ++ ["Generic"],
     fetch_package(Repos, ErtsVsn, Package, Version, To, Areas, lib, Timeout).
 
 %% @spec fetch_binary_package(Repos::list(), Package::string(), Version::string(), To::string(), Timeout) -> ok | {error, Reason}
@@ -276,7 +276,7 @@ fetch_erts_package(Repos, Version, To, Timeout) ->
         false ->
             filelib:ensure_dir(filename:join([To, "tmp"])),
 	    SysInfo = ewr_util:system_info(),
-	    Areas = create_system_info_series(SysInfo) ++ ["Generic"],
+	    Areas = ewr_util:create_system_info_series(SysInfo) ++ ["Generic"],
 	    ErtsAreas = lists:map(
 			  fun(ErtsArea) ->
 				  filename:dirname(ewr_repo_paths:erts_package_suffix(Version, ErtsArea))
@@ -435,20 +435,4 @@ handle_tar_file(To, ActualTo) ->
     file:delete(ewr_util:handle_cygwin_path(ActualTo)),
     ok.
 
-create_system_info_series(ArchString) ->
-    try
-	{ok, {[MinorVersionString], Rest}} = ewl_string_manip:n_tokens(lists:reverse(ArchString), 1, "."),
-	ArchStringPart = lists:reverse(Rest),
-	MinorVersions = lists:reverse(lists:seq(0, list_to_integer(MinorVersionString))),
-	lists:map(fun(MinorVersion) ->
-			  lists:flatten([ArchStringPart, ".", integer_to_list(MinorVersion)])
-		  end,
-		  MinorVersions)
-    catch
-	_C:_E ->
-	    [ArchString]
-    end.
-    
-create_system_info_series_test() ->
-    ?assertMatch(["a-1.3", "a-1.2", "a-1.1", "a-1.0"], create_system_info_series("a-1.3")).
 
