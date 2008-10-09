@@ -149,7 +149,7 @@ fetch_source_packages(Repos, PackageList, To) ->
 %%-------------------------------------------------------------------
 fetch_binary_package(Repos, ErtsVsn, Package, Version, To, Timeout) ->
     SysInfo = ewr_util:system_info(),
-    Areas = create_system_info_series(SysInfo) ++ ["Generic"],
+    Areas = ["Generic"|create_system_info_series(SysInfo)],
     fetch_package(Repos, ErtsVsn, Package, Version, To, Areas, lib, Timeout).
 
 %% @spec fetch_binary_package(Repos::list(), Package::string(), Version::string(), To::string(), Timeout) -> ok | {error, Reason}
@@ -276,7 +276,7 @@ fetch_erts_package(Repos, Version, To, Timeout) ->
         false ->
             filelib:ensure_dir(filename:join([To, "tmp"])),
 	    SysInfo = ewr_util:system_info(),
-	    Areas = create_system_info_series(SysInfo) ++ ["Generic"],
+	    Areas = create_system_info_series(SysInfo),
 	    ErtsAreas = lists:map(
 			  fun(ErtsArea) ->
 				  filename:dirname(ewr_repo_paths:erts_package_suffix(Version, ErtsArea))
