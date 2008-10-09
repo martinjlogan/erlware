@@ -97,7 +97,7 @@ join(List, Sep) ->
 %% @doc Given a system info string. Take the final version number
 %%      down to 0 in the form of a series.
 %% Example: myos1.2 = ["myos1.2", "myos1.1", "myyos1.0"]
-%% @spec system_info() -> string() | exit()  
+%% @spec create_system_info_series(ArchString) -> string() | exit()  
 %% @end
 %%-------------------------------------------------------------------
 create_system_info_series(ArchString) ->
