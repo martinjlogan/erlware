@@ -35,6 +35,7 @@
 -export([
 	 repo_consult/3,
 	 system_info/0,
+	 create_system_info_series/1,
 	 erts_version/0,
 	 erts_version/1,
 	 gen_multi_erts_repo_suffix/5,
@@ -91,6 +92,27 @@ join(List, Sep) ->
                         A;
                    (A, Acc) -> Acc ++ Sep ++ A
                 end, "", List).
+
+%%-------------------------------------------------------------------
+%% @doc Given a system info string. Take the final version number
+%%      down to 0 in the form of a series.
+%% Example: myos1.2 = ["myos1.2", "myos1.1", "myyos1.0"]
+%% @spec system_info() -> string() | exit()  
+%% @end
+%%-------------------------------------------------------------------
+create_system_info_series(ArchString) ->
+    try
+	{ok, {[MinorVersionString], Rest}} = ewl_string_manip:n_tokens(lists:reverse(ArchString), 1, "."),
+	ArchStringPart = lists:reverse(Rest),
+	MinorVersions = lists:reverse(lists:seq(0, list_to_integer(MinorVersionString))),
+	lists:map(fun(MinorVersion) ->
+			  lists:flatten([ArchStringPart, ".", integer_to_list(MinorVersion)])
+		  end,
+		  MinorVersions)
+    catch
+	_C:_E ->
+	    [ArchString]
+    end.
 
 %%-------------------------------------------------------------------
 %% @doc Fetch the version of the underlying OS.
@@ -606,6 +628,10 @@ to_int(String) ->
 %%====================================================================
 %% tests
 %%====================================================================
+    
+create_system_info_series_test() ->
+    ?assertMatch(["a-1.3", "a-1.2", "a-1.1", "a-1.0"], create_system_info_series("a-1.3")).
+
 parse_consult_url_test() ->
     Test1 = "{hello, goodbye}.",
     Test2 = "[[0, 1, 2], [3, 4, 5, 6]].",
