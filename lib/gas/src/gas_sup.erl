@@ -74,6 +74,8 @@ init([]) ->
 	_          -> error_logger:tty(false)
     end,
 
+    gas_override_config:override(),
+
     error_logger:info_msg("gas_sup:init~n"),
 
     RestartStrategy    = one_for_one,
@@ -83,16 +85,8 @@ init([]) ->
     SupFlags = {RestartStrategy, MaxRestarts, MaxTimeBetRestarts},
 
     case gas:get_env(gas, mod_specs) of
-        {ok, ModSpecs} -> 
-            {ok,{SupFlags,
-		 [{gas_override_config,
-		   {gas_override_config, start_link, []},
-		   temporary,
-		   200,
-		   worker,
-		   [gas_override_config]} | create_child_specs(ModSpecs)]}};
-        undefined -> 
-            ignore
+        {ok, ModSpecs} -> {ok, {SupFlags, create_child_specs(ModSpecs)}};
+        undefined      -> ignore
     end.
 
 

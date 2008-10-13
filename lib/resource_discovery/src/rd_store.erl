@@ -81,7 +81,7 @@ new_LPS() ->
 %% @end
 %%-----------------------------------------------------------------------
 store_callback_modules(Modules) ->
-    lists:foreach(fun(Module) when is_atom(Module) -> ets:insert(?CM, Module) end, fs_lists:make_list_if_not(Modules)).
+    lists:foreach(fun(Module) when is_atom(Module) -> ets:insert(?CM, {Module}) end, fs_lists:make_list_if_not(Modules)).
      
 %%-----------------------------------------------------------------------
 %% @doc Output the callback modules.
@@ -89,7 +89,7 @@ store_callback_modules(Modules) ->
 %% @end
 %%-----------------------------------------------------------------------
 lookup_callback_modules() ->
-    ets:match_object(?CM, '$1').
+    [E || {E} <- ets:match_object(?CM, '$1')].
 
 %%-----------------------------------------------------------------------
 %% @doc Store the "I haves" or local_resources for resource discovery.
