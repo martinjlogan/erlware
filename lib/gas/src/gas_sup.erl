@@ -85,8 +85,12 @@ init([]) ->
     SupFlags = {RestartStrategy, MaxRestarts, MaxTimeBetRestarts},
 
     case gas:get_env(gas, mod_specs) of
-        {ok, ModSpecs} -> {ok, {SupFlags, create_child_specs(ModSpecs)}};
-        undefined      -> ignore
+        {ok, ModSpecs} ->
+	    ChildSpecs = create_child_specs(ModSpecs),
+	    error_logger:info_msg("gas_sup with the following child specs ~p~n", [ChildSpecs]),
+	    {ok, {SupFlags, ChildSpecs}};
+        undefined ->
+	    ignore
     end.
 
 
