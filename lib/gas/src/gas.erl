@@ -4,15 +4,50 @@
 %%%
 %%% @doc  
 %%%
-%%% <p>The <em>GAS</em> application stands for General Application Services.
-%%% The function of GAS is to provide a dynamic supervision structure for
-%%% so that applications can share resources and avoid the complications  
-%%% associated with duplicate service process inclusion. For example consider
-%%% what happens when two applications in a release both use a single registered 
-%%% library process like fs_elwrap.erl. GAS makes sure it is inluded only once for
-%%% a given release.</p>
+%%% <p>
+%%% The <em>GAS</em> application stands for General Application Services.
+%%% This comes down two two things:</p>
+%%% <p>
+%%%  1. Provide a framework for dealing with system wide configuration.
+%%%     gas provides a number of functions for
+%%%    <ul>
+%%%      <el>pulling config at run time</el>
+%%%      <el>updating config at run time</el>
+%%%      <el>working with and managing config files</el>
+%%%      <el>overriding configuration from the commandline</el>
+%%%    </ul>
+%%%  2. The second function of GAS is to provide a dynamic supervision structure for
+%%%     so that applications can share resources and avoid the complications  
+%%%     associated with duplicate service process inclusion. For example consider
+%%%     what happens when two applications in a release both use a single registered 
+%%%     library process like fs_elwrap.erl. GAS makes sure it is inluded only once for
+%%%     a given release.
+%%% </p>
 %%%
-%%% <p><em>GAS</em> works by allowing sercvices to be included via
+%%% <h2>Commandline Overriding</h2>
+%%% 
+%%% <p>Commandline overriding is accomplished by adding plain arguments to a call to
+%%% erl.  Plain arguments are those that are unevaluated by the run time system and
+%%% are specified by supplying the -extra flag as the last thing on the commandline.
+%%% after the -extra flag you simply add the -override flag and follow that with
+%%% overrides of the form -&lt;appname&gt; &lt;key&gt; &lt;value&gt;. For example if you wanted to override
+%%% the erts-code entry for the faxien application in the config file that looked like:
+%%% </p>
+%%% <pre>
+%%% {faxien, [
+%%%           {history, true},
+%%%           {erts-codes, [{on, "5.5.5"}}
+%%%          [
+%%% }
+%%% </pre>
+%%% you could use <pre>-extra -override -faxien erts-code {off, \"5.6.3\"\</pre>.
+%%% in order to override more than one value simply add more -&lt;appname&gt; &lt;key&gt; &lt;value&gt;
+%%% entries.
+%%%
+%%% <h2>Dynamic Supervision</h2>
+%%%
+%%% <p>The dynamic supervision functionality of <em>GAS</em> 
+%%% works by allowing sercvices to be included via
 %%% a  release specific specification i.e a configuration file. 
 %%% When two applications are to be included in one release they 
 %%% simply add there configurations sets.</p>
@@ -64,11 +99,7 @@
 	 modify_config_value/4,
          get_env/3,
          get_env/2,
-         get_env/1,
-	 get_argument/4,
-	 get_argument/3,
-	 get_argument/2,
-	 get_argument/1
+         get_env/1
         ]).
 
 %%--------------------------------------------------------------------
@@ -355,141 +386,9 @@ modify_config_value(FileLocation, AppGroup, Key, Fun) ->
 	    modify_config_file(FileLocation, AppGroup, Key, NewValue)
     end.
 
-%%--------------------------------------------------------------------
-%% @doc For use in association with command line parameter overriding. 
-%% <pre>
-%%
-%% Outputs a type command line parameter converted to a specific type if such a 
-%% parameter has been provided. In the absence of such a parameter the function 
-%% outputs a parameter, of the same name, from a configuration file. 
-%%
-%% Note* The fun that is passed in should either complete successfully and return just value
-%% or it should terminate with an exit.
-%%
-%% Format of Fun:
-%%  In doing a conversion of a value received from the command line it is important to recognize that 
-%%  The value will start as a list of strings. To convert a command line parameter to an integer the fun() would 
-%%  be written as follows: fun([Value]) -> list_to_integer(Value) end.
-%%
-%% Expects:
-%%  AppGroup - The application grouping to be outputd.
-%%  Key      - The Key of the value to be selectd
-%%  Type     - The type the returned value is to be converted to.
-%%  DefaultValue  - If the key is not a defined env param then DefaultValue is returned.
-%%
-%% Types:
-%%  AppGroup = Key = term()
-%%  Type = fun() | atom() currently (atom | integer | string | list | list_string)
-%%  Value = term()
-%%
-%% Notes:
-%%  Type = list_string expects a list of words for which we return a single string
-%%  joined with spaces. This is useful for re-creating a command-line-argument
-%%  that was originally a single string but which has then been broken up into a number of words.
-%%
-%% </pre>
-%%
-%% @spec get_argument(AppGroup, Key, Type, DefaultValue) -> {ok, Value} | {ok, DefaultValue} | exit()
-%% @end
-%%--------------------------------------------------------------------
-get_argument(AppGroup, Key, Type, DefaultValue) ->
-    case lists:keysearch(Key, 1, init:get_arguments()) of
-    	{value, {Key, Value}} -> 
-	    convert_type(Value, Type);
-	_                     -> 
-	    case get_env(AppGroup, Key) of
-		{ok, Value} -> {ok, Value};
-	        _           -> {ok, DefaultValue}
-	    end
-    end.
-
-%%--------------------------------------------------------------------
-%% @doc For use in association with command line parameter overriding. 
-%% <pre>
-%%
-%% Outputs a type command line parameter converted to a specific type if such a 
-%% parameter has been provided. In the absence of such a parameter the function 
-%% outputs a parameter, of the same name, from a configuration file. 
-%%
-%% Note* The fun that is passed in should either complete successfully and return just value
-%% or it should terminate with an exit.
-%%
-%% Format of Fun:
-%%  In doing a conversion of a value received from the command line it is important to recognize that 
-%%  The value will start as a list of strings. To convert a command line parameter to an integer the fun() would 
-%%  be written as follows: fun([Value]) -> list_to_integer(Value) end.
-%%
-%% Expects:
-%%  AppGroup - The application grouping to be outputd.
-%%  Key      - The Key of the value to be selectd
-%%  Type     - The type the returned value is to be converted to.
-%%
-%% Types:
-%%  AppGroup = Key = term()
-%%  Type = fun() | atom() currently (atom | integer | string | list | list_string)
-%%  Value = term()
-%%
-%% Notes:
-%%  Type = list_string expects a list of words for which we return a single string
-%%  joined with spaces. This is useful for re-creating a command-line-argument
-%%  that was originally a single string but which has then been broken up into a number of words.
-%%
-%% </pre>
-%%
-%% @spec get_argument(AppGroup, Key, Type) -> {ok, Value} | undefined | exit()
-%% @end
-%%--------------------------------------------------------------------
-get_argument(AppGroup, Key, Type) ->
-    case lists:keysearch(Key, 1, init:get_arguments()) of
-    	{value, {Key, Value}} -> convert_type(Value, Type);
-	_                     -> get_env(AppGroup, Key)
-    end.
-
-%% @spec get_argument(Key, Type) -> {ok, Value} | undefined
-%% @equiv get_argument(gas, Key, Type)
-get_argument(Key, Type) ->
-    case lists:keysearch(Key, 1, init:get_arguments()) of
-    	{value, {Key, Value}} -> convert_type(Value, Type);
-	_                     -> get_env(Key)
-    end.
-
-%% @spec get_argument(Key) -> {ok, Value} | undefined
-%% @equiv get_argument(gas, Key, list)
-get_argument(Key) -> get_argument(Key, list).
-
 %%====================================================================
 %% Internal functions
 %%====================================================================
-% Converts a value to a particular type based on the spec
-% Currently accepts a fun() of the atom()s integer | atom | string
-% returns: {ok, Value} | exit(Reason)
-convert_type([Value], atom)    -> {ok, list_to_atom(Value)};
-convert_type([Value], string)  -> {ok, Value};
-convert_type(Value, list)      -> {ok, Value};
-convert_type([Value], integer) -> {ok, list_to_integer(Value)};
-convert_type(Value, list_string) ->
-    convert_list_string_type (Value);
-convert_type(Value, Fun)       -> {ok, Fun(Value)}.
-
-convert_list_string_type ([ValueHead | ValueTail]) when integer (ValueHead) ->
-    {ok, [ValueHead | ValueTail]};
-
-convert_list_string_type ([ValueHead | ValueTail]) when list (ValueHead) ->
-    TheListOfStrings = [ValueHead | ValueTail],
-    CatenateWithSpaces = fun (StringX, AccIn) ->
-	if AccIn == "" ->
-	    TempString = "";
-	true ->
-	    TempString = lists:append (AccIn, " ")
-	end,
-	% XXX 
-	_AccOut = lists:append (TempString, StringX)
-    end,
-    TheSingleCatenatedString = lists:foldl (CatenateWithSpaces, "", TheListOfStrings),
-    {ok, TheSingleCatenatedString};
-
-convert_list_string_type (_) ->
-    {ok, ""}.
 
 read_config_file(OverrideFilePath) ->
     case file:consult(OverrideFilePath) of
@@ -498,3 +397,4 @@ read_config_file(OverrideFilePath) ->
 	{error, enoent} ->
 	    []
     end.
+

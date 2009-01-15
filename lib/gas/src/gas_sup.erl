@@ -69,12 +69,10 @@ start_link(_StartArgs) ->
 %%          {error, Reason}   
 %%--------------------------------------------------------------------
 init([]) ->
-    case gas:get_argument(gas, err_log_tty, atom) of
-    	{ok, true} -> ok;
-	_          -> error_logger:tty(false)
-    end,
-
     gas_override_config:override(),
+
+    {ok, Value} = gas:get_env(gas, err_log_tty, false),
+    error_logger:tty(Value),
 
     error_logger:info_msg("gas_sup:init~n"),
 
