@@ -44,9 +44,10 @@ the erts-code entry for the faxien application in the config file that looked li
          [
 }
 '''
-you could use <pre>-extra -override -faxien erts-code {off, \"5.6.3\"\</pre>.
+you could use <pre>-extra -override -faxien erts-code {off, \"5.6.3\"}</pre>.
 in order to override more than one value simply add more -&lt;appname&gt; &lt;key&gt; &lt;value&gt;
-entries.
+entries. Note that quotes both single and double should be escaped on the shell as in \" or \' 
+to ensure the shell does not evaluate them and that they are passed through to the VM.
 
 <h2>Filebased Config Overriding</h2>
 <p>
