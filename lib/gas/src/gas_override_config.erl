@@ -134,18 +134,20 @@ collect_args([], Dict) ->
     dict:to_list(Dict).
     
 
-flattened_commandline_args([[$[|_] = Arg|T]) ->
-    {Elements, Rest} = pull_until($], T),
-    [lists:flatten([Arg, Elements]) | flattened_commandline_args(Rest)];
-flattened_commandline_args([[${|_] = Arg|T]) ->
-    {Elements, Rest} = pull_until($}, T),
-    [lists:flatten([Arg, Elements]) | flattened_commandline_args(Rest)];
+flattened_commandline_args([[$[|_]|_] = Args) ->
+    error_logger:info_msg("beggining a list at Args ~p~n", [Args]),
+    {Elements, Rest} = pull_until($], Args),
+    [lists:flatten(Elements)|flattened_commandline_args(Rest)];
+flattened_commandline_args([[${|_]|_] = Args) ->
+    {Elements, Rest} = pull_until($}, Args),
+    [lists:flatten(Elements)|flattened_commandline_args(Rest)];
 flattened_commandline_args([Arg|T]) ->
     [Arg|flattened_commandline_args(T)];
 flattened_commandline_args([]) ->
     [].
 
 pull_until(Char, List) ->
+    error_logger:info_msg("char ~p and list ~p~n", [Char, List]),
     pull_until(Char, List, []).
 
 pull_until(Char, [El|T], Acc) ->
