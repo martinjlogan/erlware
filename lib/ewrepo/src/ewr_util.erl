@@ -96,13 +96,14 @@ join(List, Sep) ->
 %%-------------------------------------------------------------------
 %% @doc Given a system info string. Take the final version number
 %%      down to 0 in the form of a series.
-%% Example: myos1.2 = ["myos1.2", "myos1.1", "myyos1.0"]
+%% Example: myos1.2 = ["myos1.2", "myos1.1", "myos1.0"]
 %% @spec create_system_info_series(ArchString) -> string() | exit()  
 %% @end
 %%-------------------------------------------------------------------
 create_system_info_series(ArchString) ->
     try
-	{ok, {[MinorVersionString], Rest}} = ewl_string_manip:n_tokens(lists:reverse(ArchString), 1, "."),
+	{ok, {[MinorVersionStringRev], Rest}} = ewl_string_manip:n_tokens(lists:reverse(ArchString), 1, "."),
+	MinorVersionString = lists:reverse(MinorVersionStringRev),
 	ArchStringPart = lists:reverse(Rest),
 	MinorVersions = lists:reverse(lists:seq(0, list_to_integer(MinorVersionString))),
 	lists:map(fun(MinorVersion) ->
@@ -630,7 +631,10 @@ to_int(String) ->
 %%====================================================================
     
 create_system_info_series_test() ->
-    ?assertMatch(["a-1.3", "a-1.2", "a-1.1", "a-1.0"], create_system_info_series("a-1.3")).
+    ?assertMatch(["a-1.3", "a-1.2", "a-1.1", "a-1.0"], create_system_info_series("a-1.3")),
+    ?assertMatch(["myos1.10", "myos1.9", "myos1.8", "myos1.7",
+		  "myos1.6", "myos1.5", "myos1.4", "myos1.3",
+		  "myos1.2", "myos1.1", "myos1.0"], create_system_info_series("myos1.10")).
 
 parse_consult_url_test() ->
     Test1 = "{hello, goodbye}.",
@@ -654,8 +658,10 @@ is_version_greater_test() ->
 
 chop_sys_info_test() ->
     ?assertMatch("i386_darwin8.91", chop_sys_info("i386_darwin8.91.1")),
+    ?assertMatch("i386_darwin1.10", chop_sys_info("i386_darwin1.10")),
     ?assertMatch("i386_darwin8.91", chop_sys_info("i386_darwin8.91.1.5")).
 
 is_posix_test() ->
     ?assertMatch(true, is_posix("i686-pc-linux-gnu")).
+
 
