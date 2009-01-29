@@ -298,11 +298,11 @@ run_in_location(Fun, Path) ->
 
 ensure_leading_slash_test() ->
     ?assertMatch("/blah/", ensure_leading_slash("/blah/")),
-    ?assertMatch("blah/",  ensure_leading_slash("/blah/")),
-    ?assertMatch("blah",   ensure_leading_slash("/blah")),
-    ?assertMatch("//blah", ensure_leading_slash("/blah")).
+    ?assertMatch("/blah/",  ensure_leading_slash("/blah/")),
+    ?assertMatch("/blah",   ensure_leading_slash("/blah")),
+    ?assertMatch("/blah", ensure_leading_slash("/blah")).
 
 remove_trailing_slash_test() ->
-    ?assertMatch("/blah//", remove_trailing_slash("/blah")),
-    ?assertMatch("/blah/",  remove_trailing_slash("/blah")),
+    ?assertMatch("/blah", remove_trailing_slash("/blah/")),
+    ?assertMatch("/blah",  remove_trailing_slash("/blah")),
     ?assertMatch("blah",    remove_trailing_slash("blah")).

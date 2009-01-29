@@ -12,6 +12,7 @@
    [
     gas,
     gas_sup,
+    gas_transform,
     gas_override_config
    ]},
 
