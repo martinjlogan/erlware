@@ -1,84 +1,6 @@
 %%%-------------------------------------------------------------------
-%%% File    : gas.erl
-%%% Author  : Martin J. Logan <martin@localhost.localdomain>
-%%%
-%%% @doc  
-%%%
-%%% <p>
-%%% The <em>GAS</em> application stands for General Application Services.
-%%% This comes down two two things:</p>
-%%% <p>
-%%%  1. Provide a framework for dealing with system wide configuration.
-%%%     gas provides a number of functions for
-%%%    <ul>
-%%%      <el>pulling config at run time</el>
-%%%      <el>updating config at run time</el>
-%%%      <el>working with and managing config files</el>
-%%%      <el>overriding configuration from the commandline</el>
-%%%    </ul>
-%%%  2. The second function of GAS is to provide a dynamic supervision structure for
-%%%     so that applications can share resources and avoid the complications  
-%%%     associated with duplicate service process inclusion. For example consider
-%%%     what happens when two applications in a release both use a single registered 
-%%%     library process like fs_elwrap.erl. GAS makes sure it is inluded only once for
-%%%     a given release.
-%%% </p>
-%%%
-%%% <h2>Commandline Overriding</h2>
-%%% 
-%%% <p>Commandline overriding is accomplished by adding plain arguments to a call to
-%%% erl.  Plain arguments are those that are unevaluated by the run time system and
-%%% are specified by supplying the -extra flag as the last thing on the commandline.
-%%% after the -extra flag you simply add the -override flag and follow that with
-%%% overrides of the form -&lt;appname&gt; &lt;key&gt; &lt;value&gt;. For example if you wanted to override
-%%% the erts-code entry for the faxien application in the config file that looked like:
-%%% </p>
-%%% <pre>
-%%% {faxien, [
-%%%           {history, true},
-%%%           {erts-codes, [{on, "5.5.5"}}
-%%%          [
-%%% }
-%%% </pre>
-%%% you could use <pre>-extra -override -faxien erts-code {off, \"5.6.3\"\</pre>.
-%%% in order to override more than one value simply add more -&lt;appname&gt; &lt;key&gt; &lt;value&gt;
-%%% entries.
-%%%
-%%% <h2>Dynamic Supervision</h2>
-%%%
-%%% <p>The dynamic supervision functionality of <em>GAS</em> 
-%%% works by allowing sercvices to be included via
-%%% a  release specific specification i.e a configuration file. 
-%%% When two applications are to be included in one release they 
-%%% simply add there configurations sets.</p>
-%%%
-%%% <p>GAS also provides an standard configuration 
-%%% interface. The interface allows for a decoupling of the configuration 
-%%% API and its implementation.</p>
-%%%
-%%% <p><H1>CallBack Functions</H1></p>
-%%%
-%%% <p>Returns the keys, required or optional, used for configuration 
-%%% of a process. This function must be exported from any module that 
-%%% is going to be used to be used by GAS. The function of this callback 
-%%% is to return the configuration keys that GAS will use to auto 
-%%% configure the service the module encapsulates.</p>
-%%%
-%%% <pre>
-%%% configuration_spec(Function) -> CongifurationSpec
-%%%
-%%% Variables:
-%%%  Function - The function that configuration_spec pertains to.
-%%%
-%%% Types:
-%%%  ConfigurationSpec = [Spec]
-%%%   Spec = {optional, ConfToken} | {required, ConfToken}
-%%%    ConfToken = {App, Key} | Key
-%%%  Function = atom()
-%%% </pre>
-%%% @end
-%%%
-%%% Created : 24 Jan 2003 by Martin J. Logan <martin@localhost.localdomain>
+%%% @author  : Martin J. Logan <martin@erlware.org>
+%%% Created : 24 Jan 2003 by Martin J. Logan 
 %%%-------------------------------------------------------------------
 -module(gas).
 
@@ -136,6 +58,7 @@ stop(_State) ->
 
 
 %%--------------------------------------------------------------------
+%% @private
 %% @doc Stores all data associated with a particular app in the local store.
 %% <pre>
 %%

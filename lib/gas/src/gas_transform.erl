@@ -18,11 +18,18 @@
 %%%===================================================================
 
 %%--------------------------------------------------------------------
-%% @doc transform a term into another term. Will throw an exception on failure.
+%% @doc Transform a term into another term. Will throw an exception on failure.
+%% Example: Term ={hello, dolly} 
+%%          TransformationSpec = "{H, D}:{ok, {D, H}}
+%%          Output = {ok, {dolly, hello}}
+%% Tranformation specs are separated into two parts separated with a colon.
+%% The first part is the match and bind where as the second part is the
+%% ouput using what has been bound.
 %% @spec transform_term(Term, TransformationSpec) -> term()
 %% @end
 %%--------------------------------------------------------------------
 transform_term(Terms, Spec)  ->
+    error_logger:info_msg("gas_transform:transform_term(~p, ~p)~n", [Terms, Spec]),
     [InSpec, OutSpec] = string:tokens(Spec, ":"),
     Dict = extract_terms(Terms, InSpec),
     build_output_term(Dict, OutSpec).
@@ -36,7 +43,7 @@ transform_term(Terms, Spec)  ->
 %% @doc take an outspec and produce a term corresponding to it.
 %%      bindings.
 %% Example: build_output_term(dict(), "[Var, {Var2}]") -> [a, {b}] if Var in the dict is a and Var2 is b
-%% @spec (Spec) -> {Var, RestOfSpec} | {error, Reason}
+%% @spec (VarStore, Spec) -> {Var, RestOfSpec} | {error, Reason}
 %% @end
 %%--------------------------------------------------------------------
 build_output_term(VarStore, [H|_] = RawSpec) when H == ${ ->
@@ -71,7 +78,7 @@ pull_from_spec(VarStore, Spec) when is_list(Spec) ->
 %% @doc take an inspec and produce a dictionary containing the correct
 %%      bindings.
 %% Example: extract_terms({a, b}, "{Var, Var2}") -> will bind Var to a and Var2 to b in the dictionary.
-%% @spec (Spec) -> {Var, RestOfSpec} | {error, Reason}
+%% @spec (Terms, InSpec) -> {Var, RestOfSpec} | {error, Reason}
 %% @end
 %%--------------------------------------------------------------------
 extract_terms(Terms, InSpec) ->
@@ -197,7 +204,7 @@ pull_var([H|T], Acc) when H >= $A, H =< $Z ->
 pull_var(Spec, _Acc) ->
     {error, {no_var, Spec}}.
 
-pull_var_body([H|T], Acc) when H == $"; H == $\ ->
+pull_var_body([H|T], Acc) when H == $_; H == $"; H == $\ ->
     pull_var_body(T, [H|Acc]);
 pull_var_body([H|T], Acc) when H >= $0, H =< $9 ->
     pull_var_body(T, [H|Acc]);
@@ -247,6 +254,7 @@ special_case(Msg, ArgString) ->
 pull_var_test() ->
     ?assertMatch({error, {no_var, "{hello}"}}, pull_var("{hello}")),
     ?assertMatch({"Hello", []},          pull_var("Hello")),
+    ?assertMatch({"hello_hello", []},    pull_var("hello_hello")),
     ?assertMatch({"_Hello", []},         pull_var("_Hello")),
     ?assertMatch({"Hello9", []},         pull_var("Hello9")),
     ?assertMatch({"hello", []},          pull_var("hello")),
@@ -276,6 +284,7 @@ transform_term_test() ->
 
     ?assertMatch(["dolly", hello], transform_term({hello}, "{H}:[\"dolly\", H]")),
     ?assertMatch([dolly, hello], transform_term({hello}, "{H}:[dolly, H]")),
+    ?assertMatch({ok, {dolly, hello}}, transform_term({hello}, "{H}:{ok, {dolly, H}}")),
 
     ?assertMatch([dolly, hello], transform_term({hello, dolly}, "{H, D}:[D, H]")),
     ?assertMatch({dolly, hello}, transform_term([hello, dolly], "[H, D]:{D, H}")),

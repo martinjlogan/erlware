@@ -69,12 +69,13 @@ start_link(_StartArgs) ->
 %%          {error, Reason}   
 %%--------------------------------------------------------------------
 init([]) ->
+    error_logger:tty(false),
     gas_override_config:override(),
 
     {ok, Value} = gas:get_env(gas, err_log_tty, false),
     error_logger:tty(Value),
 
-    error_logger:info_msg("gas_sup:init~n"),
+    error_logger:info_msg("gas_sup:init/1~n"),
 
     RestartStrategy    = one_for_one,
     MaxRestarts        = 1000,
@@ -84,7 +85,8 @@ init([]) ->
 
     case gas:get_env(gas, mod_specs) of
         {ok, ModSpecs} ->
-	    ChildSpecs = create_child_specs(ModSpecs),
+	    {ok, Wiring} = gas:get_env(gas, wiring, []),
+	    ChildSpecs   = create_child_specs(ModSpecs, Wiring),
 	    error_logger:info_msg("gas_sup with the following child specs ~p~n", [ChildSpecs]),
 	    {ok, {SupFlags, ChildSpecs}};
         undefined ->
@@ -101,7 +103,8 @@ init([]) ->
 %% Description: Creates a list of proper child specs.
 %% 
 %% Expects:
-%%  ModSpecs - A list of name, module, function, arg specs to build a supervision tree. If args is not specified then configuration specs must be defined.
+%%  ModSpecs - A list of name, module, function, arg specs to build a supervision tree.
+%%  If args is not specified then configuration specs must be defined.
 %%
 %% Types:
 %%  ModSpecs = [ModSpec]
@@ -111,23 +114,48 @@ init([]) ->
 %% 
 %% Returns: ChildSpecs | exit(badmatch).
 %%--------------------------------------------------------------------
-create_child_specs([{Name, {M, F, A}}|T]) ->
+create_child_specs([{Name, {M, F, A}}|T], Wiring) ->
     [{Name, 
      {M, F, A}, 
      permanent, 
      200, 
      worker, 
-     [Name]} | create_child_specs(T)];
-create_child_specs([{Name, {M, F}}|T]) ->
-    [{Name, 
-     {M, F, [get_opts(M, F)]}, 
-     permanent, 
-     200, 
-     worker, 
-     [Name]} | create_child_specs(T)];
-create_child_specs([]) ->
+     [Name]} | create_child_specs(T, Wiring)];
+create_child_specs([{Name, {M, F}}|T], Wiring) ->
+    case lists:keysearch(Name, 1, Wiring) of
+	false ->
+	    [{Name, 
+	      {M, F, [get_opts(M, F)]}, 
+	      permanent, 
+	      200, 
+	      worker, 
+	      [Name]} | create_child_specs(T, Wiring)];
+	{value, {Name, WireSpecs}} ->
+	    error_logger:info_msg("gas_sup:create_child_specs/2 using the following wirespecs ~p for ~p~n", [WireSpecs, Name]),
+	    [{Name, 
+	      {M, F, return_args(WireSpecs)}, 
+	      permanent, 
+	      200, 
+	      worker, 
+	      [Name]} | create_child_specs(T, Wiring)]
+    end;
+create_child_specs([], _Wiring) ->
     [].
 
+return_args(WireSpecs) ->
+    return_args(WireSpecs, []).
+
+return_args([{transform_previous, TransformSpec}|T], Acc) ->
+    TransformedValue = gas_transform:transform_term(Acc, TransformSpec),
+    return_args(T, TransformedValue);
+return_args([{wire, App, Key, TransformSpec}|T], Acc) ->
+    {ok, Value} = gas:get_env(App, Key),
+    TransformedValue = gas_transform:transform_term(Value, TransformSpec),
+    return_args(T, Acc ++ [TransformedValue]);
+return_args([Value|T], Acc) ->
+    return_args(T, Acc ++ [Value]);
+return_args([], Acc) ->
+    Acc.
 
 %%--------------------------------------------------------------------
 %% Function: get_opts/1
