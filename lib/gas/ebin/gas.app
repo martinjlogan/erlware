@@ -5,7 +5,7 @@
   {description, "Basic services for a release"},
 
   % The version of the applicaton
-  {vsn, "8.0.0"},
+  {vsn, "8.0.1"},
 
   % All modules used by the application.
   {modules,

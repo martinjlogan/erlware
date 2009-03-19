@@ -90,7 +90,7 @@ init([]) ->
 	    error_logger:info_msg("gas_sup with the following child specs ~p~n", [ChildSpecs]),
 	    {ok, {SupFlags, ChildSpecs}};
         undefined ->
-	    ignore
+	    {ok, {SupFlags, []}}
     end.
 
 
