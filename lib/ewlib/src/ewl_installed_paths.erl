@@ -40,7 +40,7 @@
 %% @end
 %%--------------------------------------------------------------------
 release_container_path(InstallationPath) ->
-    lists:flatten([InstallationPath, "/release_packages"]).
+    lists:flatten([InstallationPath, "/releases"]).
 
 %%--------------------------------------------------------------------
 %% @doc Returns the path to the directory applications are stored in.
@@ -48,7 +48,7 @@ release_container_path(InstallationPath) ->
 %% @end
 %%--------------------------------------------------------------------
 application_container_path(InstallationPath, ErtsVsn) ->
-    filename:join([InstallationPath, "packages", ErtsVsn, "lib"]).
+    filename:join([InstallationPath, "lib"]).
 
 %%--------------------------------------------------------------------
 %% @doc Returns a path to the directory where executable files sit. 
@@ -64,7 +64,7 @@ executable_container_path(InstallationPath) when is_list(InstallationPath) ->
 %% @end
 %%--------------------------------------------------------------------
 erts_container_path(InstallationPath, ErtsVsn) -> 
-    filename:join([InstallationPath, "packages", ErtsVsn]).
+    InstallationPath.
 
 %%--------------------------------------------------------------------
 %% @doc Returns a path to the directory under which the release file sits.
@@ -72,7 +72,7 @@ erts_container_path(InstallationPath, ErtsVsn) ->
 %% @end
 %%--------------------------------------------------------------------
 release_file_container_path(InstallationPath, RelName, RelVsn) ->
-    lists:flatten([installed_release_dir_path(InstallationPath, RelName, RelVsn), "/release/"]).
+    installed_release_dir_path(InstallationPath, RelName, RelVsn).
 
 %%====================================================================
 %% Package Paths

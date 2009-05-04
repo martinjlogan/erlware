@@ -104,49 +104,34 @@ single boolean argument. This can be accomplished by using the following within 
 
 <p>
 The format as you can see is to put the mod_specs config (short for module specs) into your release configuration file. 
-The format of this is: {mod_specs, [{ServiceKey, {Module, Function, ArgsList}}]}. What if the args are already included in the
-config file and we want to use them to start our service. Lets say our my_service takes one arg but that happens to come
-from config that has already been included in the release config file. We would want to use that so as to avoid having
-multiple places to change a value - this becomes especially important if you are using config file overriding. These 
-argument values get passed to GAS dynamically started services after all config file overriding is complete.
+The format of this is: {mod_specs, [{ServiceKey, {Module, Function, ArgsList}}]}. Sometimes the arguments that we want to include in an argument list are already present in some other format in the config file. For example, we configure a log file location and then want to start a process via gas to watch that log file. We don't want to have to include the log file location twice in the same config file because that is ugly and prone to error. The situation becomes even more ugly when we get into config overriding.  We would want to use the original config token that so as to avoid having
+multiple places to change a value - again, this becomes especially important if you are using config file overriding. These 
+argument values get passed to GAS dynamically started services after all config file overriding is complete. Gas provides a method by which you can specify the config tokens you want to use as arguments to your mod specs and also provides a way to run transformations on them to make them suitable for consumption by the service you are starting. Examples are provided below.
 </p>
 
 ```
- {other_app,
+ {support_app,
   [
-   {config_tuple, {true, no_play}}
+   {version, {production, "5.6.7"}}
   ]
  },
 
  {gas,
   [
-   {mod_specs, [{my_service_key, {my_service, start_link}}]}
+   {mod_specs, [{my_service, {my_service_srv, start_link}}]}
 
    {wiring, [
-             {my_service_key, [{wire, other_app, boolean_config, "{Bool, _}:Bool"}]}
+             {my_service, [{wire, support_app, version, "{_, Version}:Version"}]}
             ]},
   ]
  },
 '''
 
 <p>
-That deserves a little explanation. What is going on above is we have supplied the Module and the Function for the
-service known to sasl as my_service_key without any arguments. This means that GAS will look for wiring to define
-what arguments are passed to the Module:Function. To do this we add the wiring tuple which takes a list of direct
-config and wires. In this example we have no direct config, but we do have one wire. Each wire in the list following
-the Key will be evaluated and provided to as arguments to the Module:Function in the order that it was found in the
-list following the key in the wiring tuple. In this case we supply only one 
-{wire, other_app, boolean_config, "{Bool, _}:Bool"}.
-This is of the form {wire, App, Key, TransformSpec}. It is the tranform spec that says how the configuration value
-specified by App and Key will be transformed and included in the list of arguments to Module:Function. In this case
-we have {true, no_play} specified under other_app with key config_tuple. Our TransformSpec has two parts, separated
-with a colon. The first part is the match spec which matches the config tuple with basic pattern matching. The second
-part stipulates the output term. So in this case we match and bind Bool and specify that the output should be bool 
-on it's own. That means that myservice will be started with apply(myservice, start_link [Bool]).
-</p>
+That deserves a little explanation. What is going on above is we have supplied the Module and the Function for the service known as my_service without any arguments. This means that GAS will look for "wiring" to define what arguments, potentially sourced from other config pairs, are to be wired up with our service so that ultimately they are passed to Module:Function as arguments potentially having been transformed along the way to render them consumable by the service we are starting with Module:Function(WiredArgs). To do this we add the wiring tuple which takes a list of literal config and wires specifying config to be pulled from elsewhere in the config file or any of it's inherited decendants. In this example we have no literal config, but we do have one wire. In the case where we have more than one wire each wire in the list of wires will be evaluated and provided to as arguments to the Module:Function in the order that it was included. In this case we supply only one {wire, support_app, version, "{_, Version}:Version"}. This is of the form {wire, App, Key, TransformSpec}. It is the tranform spec that says how the configuration value specified by App and Key, in this case the app support_app and the key version, will be transformed and included in the list of arguments to Module:Function. {production, "5.6.7"} is the value of the config pair we have specified and it will be transformed according to the tranformation spec in our wire. Our TransformSpec has two parts, separated with a colon. The first part is the match spec which matches the config tuple with basic pattern matching. The second part stipulates the output term. So in this case with {_, Version} we will ignore the atom 'production' and grab "5.6.7" as Version. To the right of the ":" we have the output side of our expression which indicates that we will output just Version. my_service will be started as such apply(my_service_srv, start_link [Version]). </p>
 
 <p>
-Log file rotation and truncation is a good example of where GAS is needed. A problem can arise from this if more than one application in a release includes a general service such as this that could happen to use a registered name, or in the case of file rotation, happens to modify a single resource in a non idempotent manner. As you know GAS allows the owner of a release to configure these services to run on a per release basis instead of a per application basis. Below is a real world example of how to configure file rotation and trunction with ewl_elwrap_h, which is found in the ewlib application, the release config entries would be the following
+Log file rotation and truncation is a good example of where GAS is needed. A problem can arise from this if more than one application in a release includes a general service such as this that could happen to use a registered name, or in the case of file rotation, happens to modify a single resource in a non idempotent manner. As you know GAS allows the owner of a release to configure these services to run on a per release basis instead of a per application basis. Below is a real world example, one you can literally paste into your release config and see work, of how to configure file rotation and trunction with ewl_elwrap_h, which is found in the ewlib application.
 </p>
 
 ```
@@ -154,16 +139,14 @@ Log file rotation and truncation is a good example of where GAS is needed. A pro
  
  {gas,
   [
-   %% indicates the module function and optionally args of the services to startup.
-   %% at startup ewl_elwrap_h:start_link() will be called as a result of this entry.
    {mod_specs, [{elwrap, {ewl_elwrap_h, start_link}}]},
    
    {wiring, [
              {elwrap, [
-               {wire, sasl, sasl_error_logger, "V:{sasl_error_logger, V}"},
+               {wire, sasl, sasl_error_logger, "File:{sasl_error_logger, File}"},
                {err_log, "/tmp/faxien.err_log"},
                {err_log_wrap_info, {{err,5000000,10},{sasl,5000000,10}}},
-               {transform_previous, "V:[V]"}
+               {transform_previous, "Args:[Args]"}
               ]}
             ]},
   ]
@@ -171,8 +154,8 @@ Log file rotation and truncation is a good example of where GAS is needed. A pro
 '''
 
 <p>
-Above is about as complex an example as you can have, so lets break it down a bit. Our wiring for this contains a number of entries under the service key elwrap. The first one is a wire so we transform the value found at the app sasl at key 
-sasl_error_logger using the transformation spec "V:{sasl_error_logger, V}" which would yeild {sasl_error_logger, {file, "/tmp/sasl_log"}} as the first value in our list of arguments. The next entries are not wires, they are literal config. They will be passed as args to our Module Function in the order they appear in the list. The last entry is a transform previous which specifies that all the list of args so far accumulated should be transformed according to the tranformation spec provided. In this case this is done because we want to pass all the arguments supplied here as a list to the start_link function in ewl_elwrap_h. Without this we would have apply(ewl_elwrap_h, start_link, [Arg1, Arg2, Arg3]) which would be suitable for ewl_elwrap_h:start_link/3 but not for ewl_elwrap_h:start_link/1 which is indeed the function we want to call as in apply(ewl_elwrap_h, start_link, [[Arg1, Arg2, Arg3]]) 
+Above is about as complex an example as you can have, so lets break it down a bit. Our wiring for this contains a number of entries under the service key elwrap. The first one is a wire indicating that we want to wire and transform the value found in the application config for the 'sasl' application for the key 'sasl_error_logger'.
+sasl_error_logger using the transformation spec "File:{sasl_error_logger, File}" where File is the value found for the key 'sasl_error_logger which is {file, "/tmp/sasl_log"}. The transformation says we should take that value and add it into a tuple that has as its first element the atom 'sasl_error_logger'. This yeilds {sasl_error_logger, {file, "/tmp/sasl_log"}} as the first value in our list of arguments. Basically this transformation recreated the exact key value pair originally found in the configuration which is exactly what the elwrap service wants oddly enough. The next entries are not wires, they are literal config. They will be passed as args to our Module Function in the order they appear in the list. So up until now we have three arguments, one wired and the other two literal, in a list ready to be passed to the elwrap service in the order they appear in the list.  The last entry is a bit tricky so pay attention. The final "wire" is a transform previous which takes the list we have built up so far and applies a transform to it as a whole. This transform previous specifies that the list of arguments we have built up should be transformed in such a manner as to create a list of lists. It says Args:[Args] where Args on the left hand side is the argument list we have built up and where the right hand side says to output those args within yet another list [Args]. In this case this is done because we want to pass all the arguments supplied here as a single list to the start_link function in ewl_elwrap_h.  Remember that the way dynamic function application in Erlang works is that it takes a list of arguments such that Module, Function, [Arg1, Arg2] is evaluated essentially as Module:Function(Arg1, Arg2).  So without the final transformation we would have ewl_elwrap_h:start_link(Arg1, Arg2, Arg3) which is not infact what the elwrap service wants, it wants to take all its arguments as a list of options as such ewl_elwrap_h:start_link([Arg1, Arg2, Arg3]) which is what our last conversion gives us by outputting our list of Args as [Args].
 </p>
 
 <h2>Configuration Functions</h2>

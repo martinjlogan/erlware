@@ -1,6 +1,6 @@
 {application, ewlib,
  [{description, "Erlware support library"},
-  {vsn, "0.8.2.1"},
+  {vsn, "0.9.0.0"},
   {modules, [
 	     ewl_talk, 
 	     ewl_elwrap_h, 
