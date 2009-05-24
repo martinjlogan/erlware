@@ -54,8 +54,13 @@ repo_get([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
     error_logger:info_msg("ewr_repo_dav:repo_get(~p, ~p, ~p)~n", [Repo, Suffix, Timeout]),
     URL = ewl_file:join_paths(Repo, Suffix),
     Res =  ibrowse:send_req(URL, [], get, [], [], Timeout),
+    handle_ibrowse_return(Res, ["200"]);
+repo_get([$h,$t,$t,$p,$s,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
+    error_logger:info_msg("ewr_repo_dav:repo_get(~p, ~p, ~p)~n", [Repo, Suffix, Timeout]),
+    URL = ewl_file:join_paths(Repo, Suffix),
+    AuthOptions = ewr_util:get_auth_options(Repo),
+    Res = ibrowse:send_req(URL, [], get, [], AuthOptions, Timeout),
     handle_ibrowse_return(Res, ["200"]).
-
 
 %%-------------------------------------------------------------------
 %% @doc

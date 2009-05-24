@@ -33,39 +33,40 @@
 
 %% API
 -export([
-	 repo_consult/3,
-	 system_info/0,
-	 create_system_info_series/1,
-	 erts_version/0,
-	 erts_version/1,
-	 gen_multi_erts_repo_suffix/5,
-	 gen_repo_suffix/2,
-	 gen_repo_suffix/3,
-	 gen_repo_suffix/4,
-	 gen_repo_suffix/5,
-	 gen_erts_suffix/1,
-	 gen_multi_erts_repo_stub_suffix/4,
-	 gen_multi_erts_repo_stub_suffix/3,
-	 gen_repo_stub_suffix/3,
-	 gen_repo_stub_suffix/4,
-         consult_url/1,
-         gen_metadata_stub_suffix/1,
-         gen_metadata_suffix/2,
-         gen_metadata_suffix/3,
-         parse_version/1,
-         merge_per_app_deps/2,
-         join/2,
-         version_to_string/1,
-	 app_name/1,
-	 fetch_local_appfile_key_values/2,
-	 handle_cygwin_path/1,
-	 is_version_greater/2
-	]).
+        repo_consult/3,
+        system_info/0,
+        create_system_info_series/1,
+        erts_version/0,
+        erts_version/1,
+        gen_multi_erts_repo_suffix/5,
+        gen_repo_suffix/2,
+        gen_repo_suffix/3,
+        gen_repo_suffix/4,
+        gen_repo_suffix/5,
+        gen_erts_suffix/1,
+        gen_multi_erts_repo_stub_suffix/4,
+        gen_multi_erts_repo_stub_suffix/3,
+        gen_repo_stub_suffix/3,
+        gen_repo_stub_suffix/4,
+        consult_url/1,
+        gen_metadata_stub_suffix/1,
+        gen_metadata_suffix/2,
+        gen_metadata_suffix/3,
+        parse_version/1,
+        merge_per_app_deps/2,
+        join/2,
+        version_to_string/1,
+        app_name/1,
+        fetch_local_appfile_key_values/2,
+        handle_cygwin_path/1,
+        is_version_greater/2,
+        get_auth_options/1
+    ]).
 
 %%====================================================================
 %% API
 %%====================================================================
-	    
+
 %%--------------------------------------------------------------------
 %% @doc 
 %%  Convert a version list in deps format to astring.
@@ -78,8 +79,8 @@
 %%--------------------------------------------------------------------
 version_to_string(Ver) ->
     join(lists:map(fun(Int) ->
-                           integer_to_list(Int)
-                   end, Ver), ".").
+                    integer_to_list(Int)
+            end, Ver), ".").
 
 %%-------------------------------------------------------------------
 %% @doc 
@@ -89,9 +90,9 @@ version_to_string(Ver) ->
 %%-------------------------------------------------------------------
 join(List, Sep) ->
     lists:foldl(fun(A, "") ->
-                        A;
-                   (A, Acc) -> Acc ++ Sep ++ A
-                end, "", List).
+                A;
+            (A, Acc) -> Acc ++ Sep ++ A
+        end, "", List).
 
 %%-------------------------------------------------------------------
 %% @doc Given a system info string. Take the final version number
@@ -102,17 +103,17 @@ join(List, Sep) ->
 %%-------------------------------------------------------------------
 create_system_info_series(ArchString) ->
     try
-	{ok, {[MinorVersionStringRev], Rest}} = ewl_string_manip:n_tokens(lists:reverse(ArchString), 1, "."),
-	MinorVersionString = lists:reverse(MinorVersionStringRev),
-	ArchStringPart = lists:reverse(Rest),
-	MinorVersions = lists:reverse(lists:seq(0, list_to_integer(MinorVersionString))),
-	lists:map(fun(MinorVersion) ->
-			  lists:flatten([ArchStringPart, ".", integer_to_list(MinorVersion)])
-		  end,
-		  MinorVersions)
+        {ok, {[MinorVersionStringRev], Rest}} = ewl_string_manip:n_tokens(lists:reverse(ArchString), 1, "."),
+        MinorVersionString = lists:reverse(MinorVersionStringRev),
+        ArchStringPart = lists:reverse(Rest),
+        MinorVersions = lists:reverse(lists:seq(0, list_to_integer(MinorVersionString))),
+        lists:map(fun(MinorVersion) ->
+                    lists:flatten([ArchStringPart, ".", integer_to_list(MinorVersion)])
+            end,
+            MinorVersions)
     catch
-	_C:_E ->
-	    [ArchString]
+        _C:_E ->
+            [ArchString]
     end.
 
 %%-------------------------------------------------------------------
@@ -122,14 +123,14 @@ create_system_info_series(ArchString) ->
 %%-------------------------------------------------------------------
 system_info() ->
     case catch chop_sys_info(erlang:system_info(system_architecture)) of
-	{'EXIT', Reason} ->
-	    error_logger:info_msg("sys_info threw an error ~p~n", [Reason]),
-	    throw({invalid_version, "Unable to get system architecture," ++
-		                    "this may be a pre R9 runtime. Erlang versions pre R9 are not supported"});
-	SystemName ->
-	    case is_posix(SystemName) of
+        {'EXIT', Reason} ->
+            error_logger:info_msg("sys_info threw an error ~p~n", [Reason]),
+            throw({invalid_version, "Unable to get system architecture," ++
+                    "this may be a pre R9 runtime. Erlang versions pre R9 are not supported"});
+        SystemName ->
+            case is_posix(SystemName) of
                 true ->
-		    string:strip(lists:flatten([SystemName, "-glibc-", glibc_version()]), right, $\n);
+                    string:strip(lists:flatten([SystemName, "-glibc-", glibc_version()]), right, $\n);
                 false ->
                     actual_kernel_version(SystemName)
             end
@@ -137,38 +138,38 @@ system_info() ->
 
 actual_kernel_version(SystemName) ->
     case os:find_executable(uname) of
-	false ->
-	    SystemName;
-	Uname ->
-	    OSVsn = string:strip(os:cmd(Uname ++ " -r"), right, $\n),
-	    case regexp:sub(SystemName, "[0-9\.]+$", "") of
-		{ok,SystemNameSansVsn,1} ->
-		    chop_sys_info(SystemNameSansVsn ++ OSVsn);
-		Error ->
-		    error_logger:info_msg("ewr_util:actual_kernel_version error in system name parsing ~p~n", [Error]),
-		    SystemName
-	    end
+        false ->
+            SystemName;
+        Uname ->
+            OSVsn = string:strip(os:cmd(Uname ++ " -r"), right, $\n),
+            case regexp:sub(SystemName, "[0-9\.]+$", "") of
+                {ok,SystemNameSansVsn,1} ->
+                    chop_sys_info(SystemNameSansVsn ++ OSVsn);
+                Error ->
+                    error_logger:info_msg("ewr_util:actual_kernel_version error in system name parsing ~p~n", [Error]),
+                    SystemName
+            end
     end.
-	    
-    
+
+
 
 glibc_version() ->
     case erlang:system_info(allocator) of
-	{glibc, [Major, Minor|_], _, _} -> lists:flatten([integer_to_list(Major), ".", integer_to_list(Minor)]);
-	_Error                        -> throw({no_glibc, "No version of glibc found"})
+        {glibc, [Major, Minor|_], _, _} -> lists:flatten([integer_to_list(Major), ".", integer_to_list(Minor)]);
+        _Error                        -> throw({no_glibc, "No version of glibc found"})
     end.
 
 %% If the system_architeture string has a version number appended to the back of it, as in i386-apple-darwin8.8.1, make sure
 %% to strip it down to major minor as in i386-apple-darwin8.8
 chop_sys_info(Arch) ->
-	case regexp:match(Arch, "([0-9]+\\.)+[0-9]+") of
-		{match, Start, Length} ->
-    		VersionString = string:substr(Arch, Start, Length),
-			Base          = string:substr(Arch, 1, Start - 1),
-			lists:flatten([Base, version(minor, VersionString)]);
-		_NoMatch ->
-			Arch
-	end.
+    case regexp:match(Arch, "([0-9]+\\.)+[0-9]+") of
+        {match, Start, Length} ->
+            VersionString = string:substr(Arch, Start, Length),
+            Base          = string:substr(Arch, 1, Start - 1),
+            lists:flatten([Base, version(minor, VersionString)]);
+        _NoMatch ->
+            Arch
+    end.
 
 %%--------------------------------------------------------------------
 %% @doc Returns the erts version
@@ -180,7 +181,7 @@ chop_sys_info(Arch) ->
 erts_version(Magnitude) -> version(Magnitude, erlang:system_info(version)).
 
 version(patch, VersionString) ->
-	VersionString;
+    VersionString;
 version(minor, VersionString) ->
     [Major, Minor|_] = string:tokens(VersionString, ".-"),
     lists:flatten([Major, ".", Minor]);
@@ -209,13 +210,13 @@ erts_version() ->
 gen_multi_erts_repo_stub_suffix(TargetErtsVsn, Package, Areas, Side) -> 
     [MajorErtsVsn, MinorErtsVsn, HighPatchErtsVsn] = string:tokens(TargetErtsVsn, "."),
     ErtsVsns = lists:map(fun(PatchVsn) when PatchVsn > 0 ->
-				 lists:flatten([MajorErtsVsn, ".", MinorErtsVsn, ".", integer_to_list(PatchVsn)]);
-			    (0) ->
-				 lists:flatten([MajorErtsVsn, ".", MinorErtsVsn])
-			 end,
-			 lists:seq(0, list_to_integer(HighPatchErtsVsn))),
+                lists:flatten([MajorErtsVsn, ".", MinorErtsVsn, ".", integer_to_list(PatchVsn)]);
+            (0) ->
+                lists:flatten([MajorErtsVsn, ".", MinorErtsVsn])
+        end,
+        lists:seq(0, list_to_integer(HighPatchErtsVsn))),
     lists:foldr(fun(ErtsVsn, Acc) -> Acc ++ gen_repo_stub_suffix(ErtsVsn, Package, Areas, Side) end, [], ErtsVsns).
-    
+
 %% @spec gen_multi_erts_repo_stub_suffix(Package, Areas, Side) -> GeneratedUrls::list()
 %% @equiv gen_multi_erts_repo_stub_suffix(TargetErtsVsn, Package, Areas, Side)
 gen_multi_erts_repo_stub_suffix(Package, Areas, Side) -> 
@@ -234,11 +235,11 @@ gen_multi_erts_repo_stub_suffix(Package, Areas, Side) ->
 %% @end
 %%-------------------------------------------------------------------
 gen_repo_stub_suffix(ErtsVsn, Package, Areas, Side) when Side == lib; Side == releases ->
-    lists:map(fun(Area) -> lists:flatten(["/", ErtsVsn, "/", Area, "/", atom_to_list(Side), "/", 
-                                          Package, "/"]) end, Areas);
+lists:map(fun(Area) -> lists:flatten(["/", ErtsVsn, "/", Area, "/", atom_to_list(Side), "/", 
+                    Package, "/"]) end, Areas);
 gen_repo_stub_suffix(ErtsVsn, Package, Areas, Side) when Side == none ->
     lists:map(fun(Area) -> lists:flatten(["/", ErtsVsn, "/", Area, "/", 
-                                          Package, "/"]) end, Areas).
+                        Package, "/"]) end, Areas).
 
 %% @spec gen_repo_stub_suffix(Package, Areas, Side) -> GeneratedUrls::list()
 %% @equiv gen_repo_stub_suffix(ErtsVsn, Package, Areas, Side)
@@ -260,9 +261,9 @@ gen_repo_stub_suffix(Package, Areas, Side) ->
 gen_multi_erts_repo_suffix(TargetErtsVsn, Package, Version, Areas, Side) -> 
     [MajorErtsVsn, MinorErtsVsn, HighPatchErtsVsn] = string:tokens(TargetErtsVsn, "."),
     ErtsVsns = [lists:flatten([MajorErtsVsn, ".", MinorErtsVsn, ".", integer_to_list(E)]) || 
-		   E <- lists:seq(0, list_to_integer(HighPatchErtsVsn))], 
+        E <- lists:seq(0, list_to_integer(HighPatchErtsVsn))], 
     lists:foldr(fun(ErtsVsn, Acc) -> Acc ++ gen_repo_suffix(ErtsVsn, Package, Version, Areas, Side) end, [], ErtsVsns).
-    
+
 
 %%-------------------------------------------------------------------
 %% @deprecated
@@ -272,11 +273,11 @@ gen_multi_erts_repo_suffix(TargetErtsVsn, Package, Version, Areas, Side) ->
 %% @end
 %%-------------------------------------------------------------------
 gen_repo_suffix(ErtsVsn, Package, Version, Areas, Side) when Side == lib; Side == releases ->
-    lists:map(fun(Area) -> lists:flatten(["/", ErtsVsn, "/", Area, "/", atom_to_list(Side), "/", 
-                                          Package, "/", Version, "/"]) end, Areas);
+lists:map(fun(Area) -> lists:flatten(["/", ErtsVsn, "/", Area, "/", atom_to_list(Side), "/", 
+                    Package, "/", Version, "/"]) end, Areas);
 gen_repo_suffix(ErtsVsn, Package, Version, Areas, Side) when Side == none ->
     lists:map(fun(Area) -> lists:flatten(["/", ErtsVsn, "/", Area, "/", 
-                                          Package, "/", Version, "/"]) end, Areas).
+                        Package, "/", Version, "/"]) end, Areas).
 
 %% @equiv gen_repo_suffix(ErtsVsn, Package, Version, Areas, lib)
 %% @spec gen_repo_suffix(Package, Version, Areas, Side) -> GeneratedUrls::list()
@@ -370,7 +371,7 @@ repo_consult(Repo, Suffix, Timeout) ->
         {error, Reason} ->
             {error, Reason}
     end.
-    
+
 %%-------------------------------------------------------------------- 
 %% @doc 
 %%   Parse the version into a usable format.
@@ -402,10 +403,10 @@ merge_per_app_deps(Apps, VApps) ->
 %%--------------------------------------------------------------------
 fetch_local_appfile_key_values(AppDir, AppFileKeys) ->
     case file:consult(app_file(AppDir)) of
-	{error, Reason} ->
-	    {error, {"App file problem for " ++ app_file(AppDir), Reason}};
-	{ok, [AppTerm]} ->
-	    extract_app_keys_and_values_from_app_term(AppTerm, AppFileKeys)
+        {error, Reason} ->
+            {error, {"App file problem for " ++ app_file(AppDir), Reason}};
+        {ok, [AppTerm]} ->
+            extract_app_keys_and_values_from_app_term(AppTerm, AppFileKeys)
     end.
 
 %%--------------------------------------------------------------------
@@ -415,13 +416,13 @@ fetch_local_appfile_key_values(AppDir, AppFileKeys) ->
 %%--------------------------------------------------------------------
 app_name(AppDir) ->
     case regexp:match(AppDir, ".*-[0-9].*") of
-	{match, _, _} -> 
-	    [_Vsn, AppNameString|_] = lists:reverse(string:tokens(AppDir, "/-")),
-	    AppNameString;
-	nomatch ->
-	    filename:basename(AppDir)
+        {match, _, _} -> 
+            [_Vsn, AppNameString|_] = lists:reverse(string:tokens(AppDir, "/-")),
+            AppNameString;
+        nomatch ->
+            filename:basename(AppDir)
     end.
-    
+
 %%--------------------------------------------------------------------
 %% @doc 
 %%  In the case that erlang is installed via the windows binary but an OS cmd is executed via cygwin we have to resolve the 
@@ -441,21 +442,21 @@ app_name(AppDir) ->
 %%--------------------------------------------------------------------
 handle_cygwin_path(Target) ->
     case erlang:system_info(system_architecture) of
-	"win32" ->
-	    case catch os:cmd("uname") of
-		[$C,$Y,$G,$W,$I,$N|_] ->
-		    case filelib:is_dir(Target) of
-			true ->
-			    handle_cygwin_dir(Target);
-			false ->
-			    CygDir = handle_cygwin_dir(filename:dirname(Target)),
-			    lists:flatten([CygDir, "/", filename:basename(Target)])
-		    end;
-		_ ->
-		    Target
-	    end;
-	_ ->
-	    Target
+        "win32" ->
+            case catch os:cmd("uname") of
+                [$C,$Y,$G,$W,$I,$N|_] ->
+                    case filelib:is_dir(Target) of
+                        true ->
+                            handle_cygwin_dir(Target);
+                        false ->
+                            CygDir = handle_cygwin_dir(filename:dirname(Target)),
+                            lists:flatten([CygDir, "/", filename:basename(Target)])
+                    end;
+                _ ->
+                    Target
+            end;
+        _ ->
+            Target
     end.
 
 handle_cygwin_dir([$/,$c,$y,$g,$d,$r,$i,$v,$e,$/,_|_] = Dir) ->
@@ -467,8 +468,17 @@ handle_cygwin_dir(Dir) ->
     error_logger:info_msg("fax_install:cygdrive_dir_to_target cwd ~p pwd ~p~n", [CWD, PWD]),
     ok        = file:set_cwd(CWD),
     case regexp:match(PWD, "cygdrive") of
-	{match, _, _} -> lists:flatten([string:substr(PWD, 1, 12), Dir]);
-	_             -> Dir
+        {match, _, _} -> lists:flatten([string:substr(PWD, 1, 12), Dir]);
+        _             -> Dir
+    end.
+
+get_auth_options(Repo) ->
+    case file:consult(filename:join(home_dir(), ".faxien.secrets")) of
+        {ok, Terms} ->
+            lookup_url(Repo, Terms);
+        {error, Error} ->
+            error_logger:info_msg("Could not find auth options for repo~p (reason: ~p)~n", [Repo, Error]),
+            []
     end.
 
 %%====================================================================
@@ -481,19 +491,19 @@ handle_cygwin_dir(Dir) ->
 %% @end 
 %%--------------------------------------------------------------------
 extract_app_keys_and_values_from_app_term({application, _AppName, 
-                                           KeyValues}, AppKeys) ->
+        KeyValues}, AppKeys) ->
     KeysAndValues = lists:foldl(fun(Key, Acc) -> 
-					case lists:keysearch(Key, 1, KeyValues) of
-					    {value, Value} ->
-						[Value|Acc];
-					    false ->
-						Acc
-					end 
-				end, [], AppKeys),
+                case lists:keysearch(Key, 1, KeyValues) of
+                    {value, Value} ->
+                        [Value|Acc];
+                    false ->
+                        Acc
+                end 
+        end, [], AppKeys),
     {ok, KeysAndValues};
 extract_app_keys_and_values_from_app_term(BadTerm, _AppKeys) ->
     {error, {bad_app_file_term, BadTerm}}.
-    
+
 
 %%--------------------------------------------------------------------
 %% @private
@@ -611,10 +621,10 @@ compare([StrDig|TA], [StrDig|TB]) ->
     compare(TA, TB);
 compare([StrDigA|_], [StrDigB|_]) -> 
     case {to_int(StrDigA), to_int(StrDigB)} of
-	{Integer, String}    when is_integer(Integer),  is_list(String)      -> true;
-	{IntegerA, IntegerB} when is_integer(IntegerA), is_integer(IntegerB) -> IntegerA > IntegerB;
-	{String, Integer}    when is_integer(Integer),  is_list(String)      -> false;
-	{StringA, StringB}   when is_list(StringA),     is_list(StringB)     -> StringA > StringB
+        {Integer, String}    when is_integer(Integer),  is_list(String)      -> true;
+        {IntegerA, IntegerB} when is_integer(IntegerA), is_integer(IntegerB) -> IntegerA > IntegerB;
+        {String, Integer}    when is_integer(Integer),  is_list(String)      -> false;
+        {StringA, StringB}   when is_list(StringA),     is_list(StringB)     -> StringA > StringB
     end;
 compare([], [_|_]) -> false;
 compare([_|_], []) -> true;
@@ -622,34 +632,34 @@ compare([], [])    -> false.
 
 to_int(String) ->
     case catch list_to_integer(String) of
-	Integer when is_integer(Integer) -> Integer;
-	_                                -> String
+        Integer when is_integer(Integer) -> Integer;
+        _                                -> String
     end.
 
 %%====================================================================
 %% tests
 %%====================================================================
-    
+
 create_system_info_series_test() ->
     ?assertMatch(["a-1.3", "a-1.2", "a-1.1", "a-1.0"], create_system_info_series("a-1.3")),
     ?assertMatch(["myos1.10", "myos1.9", "myos1.8", "myos1.7",
-		  "myos1.6", "myos1.5", "myos1.4", "myos1.3",
-		  "myos1.2", "myos1.1", "myos1.0"], create_system_info_series("myos1.10")).
+            "myos1.6", "myos1.5", "myos1.4", "myos1.3",
+            "myos1.2", "myos1.1", "myos1.0"], create_system_info_series("myos1.10")).
 
 parse_consult_url_test() ->
     Test1 = "{hello, goodbye}.",
     Test2 = "[[0, 1, 2], [3, 4, 5, 6]].",
     ?assertMatch({ok, {hello, goodbye}}, 
-                 parse_consult_url_result(Test1)),
+        parse_consult_url_result(Test1)),
     ?assertMatch({ok, [[0, 1, 2], [3, 4, 5, 6]]},
-                 parse_consult_url_result(Test2)).
+        parse_consult_url_result(Test2)).
 
 parse_version_test() ->
     ?assertMatch([2, 3, 2], parse_version("2.3.2", [], [])),
     ?assertMatch([2, 22, 55], parse_version("2.22.55", [], [])),
     ?assertMatch([3123, 3221, 1123, 1213], parse_version("3123.3221.1123.1213", [], [])),
     ?assertMatch([2], parse_version("2", [], [])).
-    
+
 is_version_greater_test() ->
     ?assertMatch(true, is_version_greater("0.24.0.1", "0.22.1.1")),
     ?assertMatch(true, is_version_greater("3-2-5-alpha", "3.1.6")),
@@ -664,4 +674,58 @@ chop_sys_info_test() ->
 is_posix_test() ->
     ?assertMatch(true, is_posix("i686-pc-linux-gnu")).
 
+lookup_url(URL, TermList) ->
+    case proplists:get_value(faxien_secrets, TermList) of
+        PropList when is_list(PropList) ->
+            get_auth_for_url(URL, PropList);
+        undefined ->
+            error_logger:info_msg("Missing faxien_secrets in secrets file for repo ~p~n", [URL]),
+            [];
+        _Other ->
+            error_logger:info_msg("Wrong format for faxien_secrets in secrets file for repo ~p: ~p~n", [URL, _Other]),
+            []
+    end.
+
+get_auth_for_url(URL, PropList) ->
+    case [Tuple || {K, _} = Tuple <- PropList, lists:prefix(K, URL)] of
+        [] = L ->
+            error_logger:info_msg("No auth options for repo ~p~n", [URL]),
+            L;
+        [{_K, AuthOpts}] ->
+            check_ssl(AuthOpts),
+            AuthOpts;
+        [{_K, AuthOpts}|_] ->
+            error_logger:info_msg("More than one matching auth option for repo ~p, first one used~n", [URL]),
+            check_ssl(AuthOpts),
+            AuthOpts
+    end.
+
+home_dir() ->
+    case os:getenv("HOME") of
+        undefined ->
+            error_logger:info_msg("The HOME environment variable is not set~n"),
+            "."; % Default to current dir
+        Home ->
+            Home
+    end.
+
+check_ssl(AuthOpts) when is_list(AuthOpts) ->
+    case proplists:get_value(is_ssl, AuthOpts) of
+        true ->
+            start_ssl();
+        _ ->
+            ok
+    end.
+
+start_ssl() ->
+    case application:start(ssl) of
+        {error,{already_started,_}} ->
+            ok;
+        {error, Reason} = Error ->
+            error_logger:info_msg("Failed to start ssl, error:~n~p~n", [Reason]),
+            Error;
+        ok ->
+            ssl:seed(term_to_binary(make_ref())),
+            ok
+    end.
 
