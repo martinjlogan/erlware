@@ -51,16 +51,11 @@ repo_get([$f,$i,$l,$e,$:,$/,$/|Repo] = FullRepo, Suffix, Timeout) ->
     FilePath = ewl_file:join_paths(Repo, Suffix),
     file:read_file(FilePath);
 repo_get([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
-    error_logger:info_msg("ewr_repo_dav:repo_get(~p, ~p, ~p)~n", [Repo, Suffix, Timeout]),
-    URL = ewl_file:join_paths(Repo, Suffix),
-    Res =  ibrowse:send_req(URL, [], get, [], [], Timeout),
-    handle_ibrowse_return(Res, ["200"]);
+    AuthOptions = [],
+    repo_get_with_auth(Repo, Suffix, Timeout, AuthOptions);
 repo_get([$h,$t,$t,$p,$s,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
-    error_logger:info_msg("ewr_repo_dav:repo_get(~p, ~p, ~p)~n", [Repo, Suffix, Timeout]),
-    URL = ewl_file:join_paths(Repo, Suffix),
     AuthOptions = ewr_util:get_auth_options(Repo),
-    Res = ibrowse:send_req(URL, [], get, [], AuthOptions, Timeout),
-    handle_ibrowse_return(Res, ["200"]).
+    repo_get_with_auth(Repo, Suffix, Timeout, AuthOptions).
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -94,15 +89,11 @@ repo_put([$f,$i,$l,$e,$:,$/,$/|Repo] = FullRepo, Suffix, Payload, _Timeout) ->
 	Error -> Error
     end;
 repo_put([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Payload, Timeout) ->
-    %% Creates the directory structure within the repo.
-    repo_mkcol(Repo, filename:dirname(Suffix), Timeout),
-    URL = ewl_file:join_paths(Repo, Suffix),
-    error_logger:info_msg("ewr_repo_dav:repo_put putting to ~p~n", [URL]),
-    Res = (catch ibrowse:send_req(URL, [], put, Payload, [], Timeout)),
-    case handle_ibrowse_return(Res, ["200", "201"]) of
-	{ok, _} -> {ok, URL};
-	Error   -> Error
-    end.
+    AuthOptions = [],
+    repo_put_with_auth(Repo, Suffix, Payload, Timeout, AuthOptions);
+repo_put([$h,$t,$t,$p,$s,$:,$/,$/|_] = Repo, Suffix, Payload, Timeout) ->
+    AuthOptions = ewr_util:get_auth_options(Repo),
+    repo_put_with_auth(Repo, Suffix, Payload, Timeout, AuthOptions).
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -135,18 +126,11 @@ repo_mkcol([$f,$i,$l,$e,$:,$/,$/|Repo], Suffix, _Timeout) ->
 	    {error, E}
     end;
 repo_mkcol([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
-    (catch lists:foldl(fun(PathElement, Acc) -> 
-			       NewAcc = Acc ++ PathElement ++ "/",
-			       URL    = ewl_file:join_paths(Repo, NewAcc),
-			       error_logger:info_msg("mkcol  on ~p~n", [URL]),
-			       %% In place for the build in logging
-			       handle_ibrowse_return(
-				 ibrowse:send_req(URL, [], mkcol, [], [], Timeout),
-				 ["200", "201"]),
-			       NewAcc
-		       end, [], string:tokens(Suffix, "/"))),
-    ok.
-	    
+    AuthOptions = [],
+    repo_mkcol_with_auth(Repo, Suffix, Timeout, AuthOptions);
+repo_mkcol([$h,$t,$t,$p,$s,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
+    AuthOptions = ewr_util:get_auth_options(Repo),
+    repo_mkcol_with_auth(Repo, Suffix, Timeout, AuthOptions).
 
 %%====================================================================
 %% Internal functions
@@ -167,3 +151,33 @@ handle_ibrowse_return(Result, AcceptableCodes) ->
 	    Error
     end.
     
+repo_get_with_auth(Repo, Suffix, Timeout, AuthOptions) ->
+    error_logger:info_msg("ewr_repo_dav:repo_get(~p, ~p, ~p)~n", [Repo, Suffix, Timeout]),
+    URL = ewl_file:join_paths(Repo, Suffix),
+    Res = ibrowse:send_req(URL, [], get, [], AuthOptions, Timeout),
+    handle_ibrowse_return(Res, ["200"]).
+
+repo_put_with_auth(Repo, Suffix, Payload, Timeout, AuthOptions) ->
+    %% Creates the directory structure within the repo.
+    repo_mkcol(Repo, filename:dirname(Suffix), Timeout),
+    URL = ewl_file:join_paths(Repo, Suffix),
+    error_logger:info_msg("ewr_repo_dav:repo_put putting to ~p~n", [URL]),
+    Res = (catch ibrowse:send_req(URL, [], put, Payload, AuthOptions, Timeout)),
+    case handle_ibrowse_return(Res, ["200", "201"]) of
+        {ok, _} -> {ok, URL};
+        Error   -> Error
+    end.
+
+repo_mkcol_with_auth(Repo, Suffix, Timeout, AuthOptions) ->
+    (catch lists:foldl(fun(PathElement, Acc) -> 
+                    NewAcc = Acc ++ PathElement ++ "/",
+                    URL    = ewl_file:join_paths(Repo, NewAcc),
+                    error_logger:info_msg("mkcol  on ~p~n", [URL]),
+                    %% In place for the build in logging
+                    handle_ibrowse_return(
+                        ibrowse:send_req(URL, [], mkcol, [], AuthOptions, Timeout),
+                        ["200", "201"]),
+                    NewAcc
+            end, [], string:tokens(Suffix, "/"))),
+    ok.
+
