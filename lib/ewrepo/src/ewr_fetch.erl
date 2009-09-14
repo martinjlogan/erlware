@@ -51,12 +51,6 @@
          fetch_binary_packages/5,
          fetch_binary_packages/4,
          fetch_binary_packages/3,
-         fetch_source_package/6,
-         fetch_source_package/5,
-         fetch_source_package/4,
-         fetch_source_packages/5,
-         fetch_source_packages/4,
-         fetch_source_packages/3,
 	 fetch_erts_package/4,
 	 fetch_erts_package/3,
 	 fetch_package/8,
@@ -70,67 +64,6 @@
 %%====================================================================
 %% API
 %%====================================================================
-
-%%-------------------------------------------------------------------
-%% @spec fetch_source_package(Repos::list(), ErtsVsn, Package::string(), Version::string(), To::string(), Timeout::timeout()) ->
-%%                            ok | {error, Reason}
-%% where
-%%  Timeout = integer() | infinity
-%% @doc
-%%  Fetch the single source package (Package and Version) into the
-%%  location specified (To) from the repositories (Repos).
-%%  usage
-%%
-%%  ``ewr_fetch:fetch_source_package(["http://urltorepo/stable"], "5.5.5", "maypackage", "1.2.3", "./target").''
-%% @end
-%%-------------------------------------------------------------------
-fetch_source_package(Repos, ErtsVsn, Package, Version, To, Timeout) ->
-    fetch_package(Repos, ErtsVsn, Package, Version, To, ["Sources"], lib, Timeout).
-
-%% @spec fetch_source_package(Repos::list(), Package::string(), Version::string(), To::string(), Timeout) -> ok | {error, Reason}
-%% @equiv fetch_source_package(Repos, ErtsVsn, Package, Version, To, Timeout)
-fetch_source_package(Repos, Package, Version, To, Timeout) ->
-    ErtsVsn = ewr_util:erts_version(),
-    fetch_source_package(Repos, ErtsVsn, Package, Version, To, Timeout).
-
-%% @spec fetch_source_package(Repos::list(), Package::string(), Version::string(), To::string()) -> ok | {error, Reason}
-%% @equiv fetch_source_package(Repos, ErtsVsn, Package, Version, To)
-fetch_source_package(Repos, Package, Version, To) ->
-    ErtsVsn = ewr_util:erts_version(),
-    fetch_source_package(Repos, ErtsVsn, Package, Version, To, ?FETCH_TIMEOUT).
-
-%%-------------------------------------------------------------------
-%% @spec fetch_source_packages(Repos::list(), ErtsVsn::string(), PackageList::list(), To::string(), Timeout::timeout()) ->
-%%                             ok | {error, Reason}
-%% @doc
-%%  Fetch all packages in the list (PackageList {Name, Version}), into
-%%  the location (To) from the repositories (Repos).
-%%
-%%  ``ewr_fetch:fetch_source_packages(["http://urltorepo/stable"],
-%%                                    "5.5.5",
-%%                                   [{"maypackage", "1.2.3"},
-%%                                    {"another", "0.1.2"}],
-%%                                   "./target",
-%%                                   infinity).''
-%% @end
-%%-------------------------------------------------------------------
-fetch_source_packages(Repos, ErtsVsn, [{Name, Version}|T], To, Timeout) ->
-    fetch_source_package(Repos, ErtsVsn, Name, Version, To, Timeout),
-    fetch_source_packages(Repos, ErtsVsn, T, To, Timeout);
-fetch_source_packages(_Repos, _ErtsVsn, [], _To, _Timeout) ->
-    ok.
-
-%% @spec fetch_source_packages(Repos::list(), PackageList::list(), To::string(), Timeout::integer()) -> ok | {error, Reason}
-%% @equiv fetch_source_packages(Repos, ErtsVsn, PackageList, To, Timeout)
-fetch_source_packages(Repos, PackageList, To, Timeout) ->
-    ErtsVsn = ewr_util:erts_version(),
-    fetch_source_packages(Repos, ErtsVsn, PackageList, To, Timeout).
-
-%% @spec fetch_source_packages(Repos::list(), PackageList::list(), To::string()) -> ok | {error, Reason}
-%% @equiv fetch_source_packages(Repos, PackageList, To, Timeout)
-fetch_source_packages(Repos, PackageList, To) ->
-    fetch_source_packages(Repos, PackageList, To, ?FETCH_TIMEOUT).
-
 
 %%-------------------------------------------------------------------
 %% @spec fetch_binary_package(Repos::list(), ErtsVsn, Package::string(), Version::string(), To::string(), Timeout::timeout()) ->
