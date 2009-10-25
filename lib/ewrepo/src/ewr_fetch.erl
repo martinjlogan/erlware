@@ -82,7 +82,7 @@
 %%-------------------------------------------------------------------
 fetch_binary_package(Repos, ErtsVsn, Package, Version, To, Timeout) ->
     SysInfo = ewr_util:system_info(),
-    Areas = ["Generic"|ewr_util:create_system_info_series(SysInfo)],
+    Areas = ["Generic", "Unbuilt"|ewr_util:create_system_info_series(SysInfo)],
     fetch_package(Repos, ErtsVsn, Package, Version, To, Areas, lib, Timeout).
 
 %% @spec fetch_binary_package(Repos::list(), Package::string(), Version::string(), To::string(), Timeout) -> ok | {error, Reason}
