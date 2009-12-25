@@ -13,6 +13,7 @@
 	 release_package_library_path/1,
 	 release_package_control_file_path/1,
 	 release_package_rel_file_path/3,
+	 release_package_extended_rel_file_path/3,
 	 release_package_app_package_path/3,
 	 release_package_erts_package_path/2
 	]).
@@ -36,6 +37,14 @@ package_dir_path(ContainerDirPath, PackageName, PackageVsn) ->
 %%--------------------------------------------------------------------
 release_package_rel_file_path(ReleasePackagePath, RelName, RelVsn) ->
     ewl_file:join_paths(rel_file_base_dir(ReleasePackagePath, RelVsn), RelName ++ ".rel").
+
+%%--------------------------------------------------------------------
+%% @doc Return the path to a .rel file in a package for the new extended OTP release format.
+%% @spec release_package_rel_file_path(ReleasePackagePath::string(), RelName::string(), RelVsn::string()) -> string()
+%% @end 
+%%--------------------------------------------------------------------
+release_package_extended_rel_file_path(ReleasePackagePath, RelName, RelVsn) ->
+    ewl_file:join_paths(rel_file_base_dir(ReleasePackagePath, RelName ++ "-" ++ RelVsn), RelName ++ ".rel").
 
 %%--------------------------------------------------------------------
 %% @doc Return the path to an app package within a release package.
