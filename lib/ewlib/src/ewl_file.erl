@@ -82,14 +82,16 @@ delete_dir(Path) ->
 
 %%--------------------------------------------------------------------
 %% @doc copy an entire directory to another location.
-%% @spec copy_dir(From, To) -> ok | exit()
+%% @spec copy_dir(From, To) -> ok
 %% @end
 %%--------------------------------------------------------------------
 copy_dir(From, To) ->
     case filelib:is_dir(From) of
 	false ->
-	    {ok, _} = file:copy(From, To),
-	    ok;
+	    case file:copy(From, To) of
+		{ok, _}         -> ok;
+		{error, enoent} -> throw({error, {enoent, From, To}})
+	    end;
 	true ->
 	    case filelib:is_dir(To) of
 		true  -> ok;
