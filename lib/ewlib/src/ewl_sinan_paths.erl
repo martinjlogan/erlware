@@ -30,8 +30,9 @@
 find_project_root("/") ->
     throw(no_build_config);
 find_project_root(Directory) ->
-    ConfigFile = filename:join(Directory, "_build.cfg"),
-    case filelib:is_file(ConfigFile) of
+    ConfigFiles = lists:map(fun(ConfigFile_) -> filename:join(Directory, ConfigFile_) end,
+			   ["sinan.cfg", "_build.cfg"]),
+    case lists:any(fun(ConfigFile_) -> filelib:is_file(ConfigFile_) end, ConfigFiles) of
         true ->
             Directory;
         false ->
