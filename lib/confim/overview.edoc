@@ -34,7 +34,7 @@ Configuration Improved -&gt; Conf Improved -&gt; Confim
 <p>Commandline overriding is accomplished by adding plain arguments to a call to
 erl.  Plain arguments are those that are unevaluated by the run time system and
 are specified by supplying the -extra flag as the last thing on the commandline.
-after the -extra flag you add the -override flag to signal overrides and follow 
+Following the -extra flag you add the -override flag to signal overrides and follow 
 that with overrides of the form -&lt;appname&gt; &lt;key&gt; &lt;value&gt;. 
 For example take the config file below for the Faxien application. 
 </p>
@@ -80,14 +80,45 @@ the above would cause Faxien to look in $HOME for a file called .faxien_override
 
 <h2>Configuration Functions</h2>
 <p>
-Gas provides programatic support for applications to manage pulling and setting their config data.
+Confim provides programatic support for applications to manage pulling and setting their config data.
 </p>
    <ul>
      <li>Pulling config at run time</li>
      <li>Updating config at run time</li>
    </ul>
 <p>
-See the documentation for the gas module for the get_env, set_env, modify_config_file and modify_config_value functions.
+Pulling config at runtime is done with the get_env function. This function comes in a couple of flavors. 
+
+```
+confim:get_env(<appname>, <key>) 
+'''
+
+This function fetches the configuration for a particular appname grouping that is identified by <key>. For example in the faxien config file used in the previous section if we wrote
+
+```
+confim:get_env(faxien, history)
+'''
+
+the return value would be {ok, true}. If we go to fetch a key that does not exist from config this function will return undefined.  This is exactly the same behaviour as application:get_env/2. Confim get_env/3 allows default configuration values to clearnly be set in code. 
+
+```
+confim:get_env(<appname>, <key>, <default-value>)
+confim:get_env(faxien, history, false)
+'''
+
+Now if faxien history is not explictly set in configuration get_env will return {ok, false} which is the default value set as the third argument. Let's now move on to setting configuration.  
+
+```
+confim:set_env(<appname>, <key>, <value>)
+'''
+
+set_env will alter or add configuration depending on whether that configuration was present prior to the call to set_env. This will only alter the configuration for the life of the system. When the VM stopps and is restarted the original configuration values as found through the config file(s) will be used once again. If you desire configurations changes to be persisted to disk, i.e actually rewrite the config file(s) then following a call to set_env use persist_env.
+
+```
+confim:persist_env(<config_file_list>)
+'''
+
+The persist env command will push all configuration out to disk. If override configuration files the last override file in the chain will receive all of the changes.
 </p>
 
 @author Martin Logan

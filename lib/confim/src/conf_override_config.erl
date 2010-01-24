@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 20 Sep 2008 by Martin Logan <martinjlogan@Macintosh.local>
 %%%-------------------------------------------------------------------
--module(gas_override_config).
+-module(conf_override_config).
 
 %% API
 -export([
@@ -38,7 +38,7 @@ override() ->
 %% @end
 %%--------------------------------------------------------------------
 override_file_path() ->
-    case gas:get_env(gas, override_file_path) of
+    case confim:get_env(confim, override_file_path) of
 	{ok, OverrideFileName} ->
 	    %% @todo for now this only works for unix file paths
 	    case filename:dirname(OverrideFileName) of
@@ -48,7 +48,7 @@ override_file_path() ->
 		    {ok, OverrideFileName}
 		end;
 	undefined ->
-	    case gas:get_env(gas, home_file_path) of
+	    case confim:get_env(confim, home_file_path) of
 		undefined          -> undefined;
 		{ok, HomeFilePath} -> return_home_file_path(HomeFilePath)
 	    end
@@ -79,12 +79,12 @@ add_config_values([], ShouldContinue) ->
     ShouldContinue.
 
 add_config_values(AppName, [{home_filename, Value}|T], stop) ->
-    error_logger:info_msg("gas_override_config:add_config_values adding ~p ~p ~p~n", [AppName, home_filename, Value]),
-    gas:set_env(AppName, home_filename, Value),
+    error_logger:info_msg("confim_override_config:add_config_values adding ~p ~p ~p~n", [AppName, home_filename, Value]),
+    confim:set_env(AppName, home_filename, Value),
     add_config_values(AppName, T, continue);
 add_config_values(AppName, [{Key, Value}|T], ShouldContinue) ->
-    error_logger:info_msg("gas_override_config:add_config_values adding ~p ~p ~p~n", [AppName, Key, Value]),
-    gas:set_env(AppName, Key, Value),
+    error_logger:info_msg("confim_override_config:add_config_values adding ~p ~p ~p~n", [AppName, Key, Value]),
+    confim:set_env(AppName, Key, Value),
     add_config_values(AppName, T, ShouldContinue);
 add_config_values(_AppName, [], ShouldContinue) ->
     ShouldContinue.
@@ -115,9 +115,9 @@ read_config_file(OverrideFilePath) ->
 	    
 convert_commandline_args() ->
     PlainArgs = init:get_plain_arguments(),
-    error_logger:info_msg("gas_override_config:convert_commandline_args/0 plain args ~p~n", [PlainArgs]),
+    error_logger:info_msg("confim_override_config:convert_commandline_args/0 plain args ~p~n", [PlainArgs]),
     FlattenedArgs = flattened_commandline_args(grab_overrides(PlainArgs)),
-    error_logger:info_msg("gas_override_config:convert_commandline_args/0 arg string ~p~n", [FlattenedArgs]),
+    error_logger:info_msg("confim_override_config:convert_commandline_args/0 arg string ~p~n", [FlattenedArgs]),
     ConvertedArgs = lists:map(fun(Arg) -> convert_string_to_terms(Arg) end, no_space(FlattenedArgs)),
     collect_args(ConvertedArgs).
 
@@ -187,7 +187,7 @@ convert_string_to_terms(ArgString) ->
     end.
 
 special_case(Msg, ArgString) ->
-    error_logger:info_msg("gas_override_config:special_case/3 Special case discovered for ~p~nconverting input" ++
+    error_logger:info_msg("confim_override_config:special_case/3 Special case discovered for ~p~nconverting input" ++
 			  " arg ~p to string and reprocessing~n", [Msg, ArgString]),
     "\"" ++ ArgString ++ "\"".
 

@@ -1,5 +1,5 @@
 %%% -*- mode:erlang -*-
-{application, gas,
+{application, confim,
  [
   % A quick description of the application.
   {description, "OTP Configuration Improved"},
@@ -11,8 +11,10 @@
   {modules,
    [
     confim,
+    conf_app,
     conf_sup,
-    conf_transform,
+    conf_init,
+    conf_tree,
     conf_override_config
    ]},
 

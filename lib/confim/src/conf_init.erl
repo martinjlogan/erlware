@@ -18,6 +18,7 @@
 	 terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE). 
+-define(TABLE_NAME, ?MODULE). 
 
 -record(state, {}).
 
@@ -51,7 +52,8 @@ start_link() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    {ok, #state{}, 0}.
+    conf_override_config:override(),
+    {ok, #state{}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -95,8 +97,7 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info(_Info, State) ->
-    conf_override_config:override(),
-    {stop, normal, State}.
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
