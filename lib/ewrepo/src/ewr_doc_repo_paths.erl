@@ -41,6 +41,7 @@
         ]).
 
 -export([
+	 signature_file_suffix/4,
 	 package_suffix/4,
 	 checksum_file_suffix/4
         ]).
@@ -94,6 +95,15 @@ doc_type_suffix(Side, PackageName, PackageVsn, DocType) when is_list(PackageVsn)
 %%====================================================================
 %% The following functions return paths to actual files in the repo structure
 %%====================================================================
+
+%%--------------------------------------------------------------------
+%% @doc Returns the suffix pointing to the signature file stored in the repo for a package 
+%% @spec signature_file_suffix(Side::string(), PackageName::string(), PackageVsn::string(), DocType::string()) -> 
+%%        string()
+%% @end 
+%%--------------------------------------------------------------------
+signature_file_suffix(Side, PackageName, PackageVsn, DocType) when is_list(PackageVsn) ->
+    filename:join([doc_type_suffix(Side, PackageName, PackageVsn, DocType), "signature"]).
 
 %%--------------------------------------------------------------------
 %% @doc Returns the suffix pointing to the actual package for the given name and version.
