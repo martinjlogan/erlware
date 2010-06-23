@@ -39,6 +39,7 @@
 	 delete_dir/1,
 	 copy_dir/2,
 	 create_tmp_dir/1,
+	 make_tmp_dir/0,
 	 mkdir_p/1,
 	 compress/2,
 	 uncompress/1,
@@ -76,12 +77,12 @@ delete_dir(Path) ->
 		    ok = file:delete(Path)
 	    end;
 	true ->
-	    lists:foreach(fun(ChildPath) -> delete_dir(ChildPath) end, filelib:wildcard(Path ++ "/*")),
+	    lists:foreach(fun(ChildPath) -> delete_dir(ChildPath) end, filelib:wildcard(filename:join(Path, "*"))),
 	    ok = file:del_dir(Path)
     end.
 
 %%--------------------------------------------------------------------
-%% @doc copy an entire directory to another location.
+%% @doc copy an entire directory to another location. 
 %% @spec copy_dir(From, To) -> ok
 %% @end
 %%--------------------------------------------------------------------
@@ -95,14 +96,15 @@ copy_dir(From, To) ->
 	true ->
 	    case filelib:is_dir(To) of
 		true  -> ok;
-		false -> ok = file:make_dir(To)
+		false -> ok = mkdir_p(To)
 	    end,
 	    lists:foreach(fun(ChildFrom) -> 
 				  copy_dir(ChildFrom, lists:flatten([To, "/", filename:basename(ChildFrom)]))
-			  end, filelib:wildcard(From ++ "/*"))
+			  end, filelib:wildcard(filename:join(From, "*")))
     end.
 
 %%--------------------------------------------------------------------
+%% @deprecated Please use the function {@link make_tmp_dir} instead.
 %% @doc create a unique temorory directory.
 %% @spec create_tmp_dir(Prefix::string()) -> {ok, TmpDirPath} | {error, Reason}
 %% @end
@@ -113,7 +115,28 @@ create_tmp_dir(Prefix) ->
 	ok    -> {ok, TmpDirPath};
 	Error -> Error
     end.
+
+%%--------------------------------------------------------------------
+%% @doc make a unique temorory directory.
+%% @spec make_tmp_dir() -> TmpDirPath
+%% @end
+%%--------------------------------------------------------------------
+make_tmp_dir() ->
+    TmpDirPath = filename:join([tmp(), lists:flatten([".tmp_dir", integer_to_list(element(3, now()))])]),
+    try
+	ok = mkdir_p(TmpDirPath),
+	TmpDirPath
+    catch
+	_C:E -> throw({make_tmp_dir_failed, E})
+    end.
 	     
+tmp() ->
+    case erlang:system_info(system_architecture) of
+	"win32" ->
+	    throw(tmp_dir_not_supported_on_windows);
+	_SysArch ->
+	    "/tmp"
+    end.
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -223,7 +246,7 @@ find(FromDir, TargetPattern) ->
 				    []  -> Acc;
 				    Res -> Res ++ Acc
 				end
-			end, [], filelib:wildcard(FromDir ++ "/*")),
+			end, [], filelib:wildcard(filename:join(FromDir, "*"))),
 	    FoundDir ++ List
     end.
 

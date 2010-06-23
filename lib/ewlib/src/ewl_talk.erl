@@ -32,7 +32,7 @@
 -module(ewl_talk).
 
 %% API
--export([ask/1, ask/2, ask/4, say/1, say/2]).
+-export([ask/1, ask/2, ask/3, ask/4, say/1, say/2]).
 
 -include("eunit.hrl").
 
@@ -46,12 +46,12 @@
 %% @end
 %%-------------------------------------------------------------------
 say(Say) ->
-    error_logger:info_msg(lists:flatten([Say, "~n"])).
+    io:format(lists:flatten([Say, "~n"])).
 
 say(Say, Args) when is_list(Args) ->
-    error_logger:info_msg(lists:flatten([Say, "~n"]), Args);
+    io:format(lists:flatten([Say, "~n"]), Args);
 say(Say, Args) ->
-    error_logger:info_msg(lists:flatten([Say, "~n"]), [Args]).
+    io:format(lists:flatten([Say, "~n"]), [Args]).
 
 %%-------------------------------------------------------------------
 %% @spec ask(Str::string()) -> Resp::string()
@@ -78,9 +78,27 @@ ask(Prompt) ->
 %% @end
 %%-------------------------------------------------------------------
 ask(Prompt, boolean) ->
-    ask(Prompt, fun get_boolean/1, boolean);
+    ask_handler(Prompt, fun get_boolean/1, boolean);
 ask(Prompt, number) ->
-    ask(Prompt, fun get_integer/1, number).
+    ask_handler(Prompt, fun get_integer/1, number).
+
+%%-------------------------------------------------------------------
+%% @spec ask(Str::string(), list, ResponseSet::list()) -> Resp
+%% @doc
+%%  Asks the user to respond to the prompt. Trys to return the value
+%%  to see if it is in the list of specified strings.
+%% @end
+%%-------------------------------------------------------------------
+ask(Prompt, list, [H|_] = ResponseList) when is_list(H) ->
+    Res = ask(Prompt),
+    case lists:member(Res, ResponseList) of
+        true ->
+            Res;
+        false ->
+            say(lists:append(["Your answer must be "],
+			     lists:reverse(["or \"" ++ H ++ "\""] ++ ["\"" ++ E ++ "\" " || E <- tl(ResponseList) ]))),
+            ask(Prompt, list, ResponseList)
+    end.
 
 %%-------------------------------------------------------------------
 %% @spec ask(Str::string(), Type::atom, Min::number(), Max::number()) -> Resp
@@ -90,7 +108,7 @@ ask(Prompt, number) ->
 %% @end
 %%-------------------------------------------------------------------
 ask(Prompt, number, Min, Max) ->
-    Res = ask(Prompt, fun get_integer/1, number),
+    Res = ask_handler(Prompt, fun get_integer/1, number),
     case (Res >= Min andalso Res =< Max) of
         true ->
             Res;
@@ -110,7 +128,7 @@ ask(Prompt, number, Min, Max) ->
 %% @end
 %% @private
 %%-------------------------------------------------------------------
-ask(Prompt, TransFun, Type) ->
+ask_handler(Prompt, TransFun, Type) ->
     Ret = TransFun(ask(Prompt)),
     case Ret of
         no_clue ->
