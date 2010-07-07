@@ -38,6 +38,7 @@
 	 find/2,
 	 delete_dir/1,
 	 copy_dir/2,
+	 copy_file/2,
 	 create_tmp_dir/1,
 	 make_tmp_dir/0,
 	 mkdir_p/1,
@@ -89,8 +90,8 @@ delete_dir(Path) ->
 copy_dir(From, To) ->
     case filelib:is_dir(From) of
 	false ->
-	    case file:copy(From, To) of
-		{ok, _}         -> ok;
+	    case copy_file(From, To) of
+		ok              -> ok;
 		{error, enoent} -> throw({error, {enoent, From, To}})
 	    end;
 	true ->
@@ -102,6 +103,16 @@ copy_dir(From, To) ->
 				  copy_dir(ChildFrom, lists:flatten([To, "/", filename:basename(ChildFrom)]))
 			  end, filelib:wildcard(filename:join(From, "*")))
     end.
+
+%%--------------------------------------------------------------------
+%% @doc copy a file including timestamps,ownership and mode etc.
+%% @spec copy_file(From::string(), To::string()) -> ok | {error, Reason}
+%% @end
+%%--------------------------------------------------------------------
+copy_file(From, To) ->
+    {ok, _} = file:copy(From, To),
+    {ok, FileInfo} = file:read_file_info(From),
+    file:write_file_info(To, FileInfo). 
 
 %%--------------------------------------------------------------------
 %% @deprecated Please use the function {@link make_tmp_dir} instead.
