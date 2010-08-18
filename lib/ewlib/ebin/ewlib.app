@@ -1,6 +1,6 @@
 {application, ewlib,
  [{description, "Erlware support library"},
-  {vsn, "0.9.7.0"},
+  {vsn, "0.9.7.1"},
   {modules, [
 	     ewl_talk,
 	     ewl_elwrap_h,
@@ -11,7 +11,7 @@
 	     ewl_installed_paths,
 	     ewl_package_paths,
 	     ewl_sinan_paths,
-         ewl_plists
+             ewl_plists
 	    ]},
   {registered, []},
   {applications, [kernel, stdlib, sasl, eunit]}]}.
