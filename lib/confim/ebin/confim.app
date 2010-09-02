@@ -14,7 +14,6 @@
     conf_app,
     conf_sup,
     conf_init,
-    conf_tree,
     conf_override_config
    ]},
 

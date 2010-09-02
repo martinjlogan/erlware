@@ -43,6 +43,7 @@
 	 make_tmp_dir/0,
 	 mkdir_p/1,
 	 compress/2,
+	 compress/3,
 	 uncompress/1,
 	 uncompress/2,
 	 gsub_file/3
@@ -184,14 +185,65 @@ mkdir_p(Path) ->
 %%-------------------------------------------------------------------
 compress(TarFilePath, TargetFilePath) ->
     %% Wrapping this just in case we have to go back to os specific code - I am tired of changing this all over the place :) 
-    TarFileName = filename:basename(TarFilePath),
     TargetFileName = filename:basename(TargetFilePath),
+    TarBaseDir = filename:dirname(TargetFilePath),
+    compress(TarFilePath, [TargetFilePath], [compressed, verbose, {cd, TarBaseDir}]).
+
+%%-------------------------------------------------------------------
+%% @doc Compress a file or directory using the native os compression
+%% system. For linux/unix it is tar. The semantics of this function
+%% are very straight forward. Indicate where you want the tar file
+%% to be placed and indicate what file you want to tar up. This will
+%% do that. It will tar the target file as if it was doing it from
+%% directory that contains it. 
+%% <pre>
+%% Variables:
+%%  TarFilePath - The name or path to the file to be produced as a result of the tar command.
+%%  FileList - The list of files to add to the tar.
+%%  Options - Tar options
+%%
+%% Examples:
+%%  compress("foo.tar.gz", ["/usr/local/erlware/foo"], [{cd, "/usr/local/"}, normalize_paths])  
+%%   This will compress from the directory /usr/local and render the single element in FileList
+%%   to "erlware/foo". If normalize paths was not set the FileList element would have remained
+%%   untouched.
+%%
+%%  compress("/home/martinjlogan/foo.tar.gz", ["tmp/foo"], []) % Will put foo.tar.gz into /home/martinjlogan
+%% </pre>
+%% @spec compress(TarFilePath::string(), TargetFilePath::string(), OptionsList) -> ok | exit()
+%% where
+%%  OptionsList = RegularErlTarOpts | {cd, Path} | normalize_paths
+%% @end
+%%-------------------------------------------------------------------
+compress(TarFilePath, RawFileList, OptionsList) ->
+    TarFileName = filename:basename(TarFilePath),
+
+    FileList = normalize_paths_for_cd(RawFileList, OptionsList),
 
     Fun = fun() ->
-		  erl_tar:create(TarFileName, [TargetFileName], [compressed, verbose]),
+		  erl_tar:create(TarFileName, FileList, lists:keydelete(cd, 1, OptionsList)),
 		  file:rename(TarFileName, TarFilePath)
 	  end,
-    run_in_location(Fun, filename:dirname(TargetFilePath)).
+    run_in_location(Fun, get_base_dir(OptionsList)).
+
+get_base_dir(OptionsList) ->
+    case lists:keyfind(cd, 1, OptionsList) of
+	false ->
+	    {ok, CWD} = file:get_cwd(),
+	    CWD;
+	{cd, Path} ->
+	    Path
+    end.
+
+%% If cd exists and the normalize paths option is set them trim all supplied paths. 
+normalize_paths_for_cd(FileList, OptionsList) ->
+    case {lists:member(normalize_paths, OptionsList), lists:keyfind(cd, 1, OptionsList)} of
+	{true, {cd, Path}} ->
+	    [ewl_string_manip:strip_prefix(File, Path) || File <- FileList];
+	{_, _} ->
+	    FileList
+    end.
+     
     
 %%-------------------------------------------------------------------
 %% @doc Uncompress a file or directory using the native os compression system. For linux/unix it is tar. 

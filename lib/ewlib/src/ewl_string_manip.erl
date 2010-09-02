@@ -17,6 +17,7 @@
 %% External exports
 %%--------------------------------------------------------------------
 -export([
+         strip_prefix/2, 
          n_tokens/3, 
          separate_by_token/2,
          separate_by_token/3,
@@ -26,6 +27,22 @@
 %%====================================================================
 %% External functions
 %%====================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc Strips the first string of the second. Usually useful for file path
+%%      manipulation from absolute to relative. 
+%% @spec strip_prefix(String, Prefix) -> false | NewString
+%% @end
+%%------------------------------------------------------------------------------
+strip_prefix([Char|T1], [Char|T2]) ->
+    strip_prefix(T1, T2);
+strip_prefix(NewString, []) ->
+    NewString;
+strip_prefix([], _String) ->
+    throw(string_shorter_than_prefix);
+strip_prefix(_, _) ->
+    false.
+    
 
 %%------------------------------------------------------------------------------
 %% @doc Grabs n number of words from a string.
@@ -115,15 +132,15 @@ separate_by_token([], _Tokens, Word, _KeepToken) ->
 is_string([])   -> false;
 is_string(Term) -> lists:any(fun(Element) -> string_p1(Element) end, Term).
                                                                                    
-string_p1(H) when integer(H), H >= $\s, H < 255 -> true;
-string_p1($\n)                                  -> true;
-string_p1($\r)                                  -> true;
-string_p1($\t)                                  -> true;
-string_p1($\v)                                  -> true;
-string_p1($\b)                                  -> true;
-string_p1($\f)                                  -> true;
-string_p1($\e)                                  -> true;
-string_p1(_)                                    -> false.
+string_p1(H) when is_integer(H), H >= $\s, H < 255 -> true;
+string_p1($\n)                                     -> true;
+string_p1($\r)                                     -> true;
+string_p1($\t)                                     -> true;
+string_p1($\v)                                     -> true;
+string_p1($\b)                                     -> true;
+string_p1($\f)                                     -> true;
+string_p1($\e)                                     -> true;
+string_p1(_)                                       -> false.
 
 %%====================================================================
 %% Internal functions
