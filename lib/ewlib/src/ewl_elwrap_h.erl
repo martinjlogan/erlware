@@ -359,20 +359,25 @@ wrap_server(W) ->
 %%--------------------------------------------------------------------
 
 check_log (File, Maxbytes, Maxfiles) ->	
-    {ok, Info} = file:read_file_info (File),
-    Size = Info#file_info.size,
-    if
-	Size > Maxbytes ->
-	    io:format ("rotating log ~s~n", [File]),
-
-	    %% suppose Maxfiles is 2
-	    %% then file.0 -> file.1
-	    %% and  file   -> file.0
-
-	    rotate_versions (File, Maxfiles - 1),
-	    rotated;
-	true ->
-	    not_rotated
+    try
+	{ok, Info} = file:read_file_info (File),
+	Size = Info#file_info.size,
+	if
+	    Size > Maxbytes ->
+		error_logger:info_msg ("rotating log ~s~n", [File]),
+		
+%% suppose Maxfiles is 2
+%% then file.0 -> file.1
+%% and  file   -> file.0
+		
+		rotate_versions (File, Maxfiles - 1),
+		rotated;
+	    true ->
+		not_rotated
+	end
+    catch
+	_C:E ->
+	    error_logger:error_msg("check log failled for ~p ~p~n", [File, E])
     end.
 
 %%--------------------------------------------------------------------
