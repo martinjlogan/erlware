@@ -36,6 +36,8 @@
 -export([
 	 join_paths/2,
 	 find/2,
+	 md5/1,
+	 md5_checksum/1,
 	 delete_dir/1,
 	 copy_dir/2,
 	 copy_file/2,
@@ -82,6 +84,35 @@ delete_dir(Path) ->
 	    lists:foreach(fun(ChildPath) -> delete_dir(ChildPath) end, filelib:wildcard(filename:join(Path, "*"))),
 	    ok = file:del_dir(Path)
     end.
+
+
+%%-------------------------------------------------------------------
+%% @doc return an md5 checksum string of a binary.
+%% @spec (Bin) -> string()
+%% @end
+%%-------------------------------------------------------------------
+md5_checksum(Bin) ->
+    MD5 = md5(Bin),
+    list_to_binary(io_lib:fwrite("~s", [MD5])).
+
+%%-------------------------------------------------------------------
+%% @doc return the hex encoded md5 string for a binary
+%% @spec (Bin) -> string()
+%% @end
+%%-------------------------------------------------------------------
+md5(Bin) -> hex(binary_to_list(erlang:md5(Bin))).
+
+hex(L) when is_list (L) -> lists:flatten([hex(I) || I <- L]);
+hex(I) when I > 16#f -> [hex0((I band 16#f0) bsr 4), hex0((I band 16#0f))];
+hex(I)               -> [$0, hex0(I)].
+
+hex0(10) -> $a;
+hex0(11) -> $b;
+hex0(12) -> $c;
+hex0(13) -> $d;
+hex0(14) -> $e;
+hex0(15) -> $f;
+hex0(I) ->  $0 + I.
 
 %%--------------------------------------------------------------------
 %% @doc copy an entire directory to another location. 
@@ -210,7 +241,7 @@ compress(TarFilePath, TargetFilePath) ->
 %%
 %%  compress("/home/martinjlogan/foo.tar.gz", ["tmp/foo"], []) % Will put foo.tar.gz into /home/martinjlogan
 %% </pre>
-%% @spec compress(TarFilePath::string(), TargetFilePath::string(), OptionsList) -> ok | exit()
+%% @spec compress(TarFilePath::string(), FileList::list(), OptionsList) -> ok | exit()
 %% where
 %%  OptionsList = RegularErlTarOpts | {cd, Path} | normalize_paths
 %% @end
