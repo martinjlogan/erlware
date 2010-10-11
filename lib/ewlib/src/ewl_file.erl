@@ -59,6 +59,7 @@
 %%====================================================================
 %% External functions
 %%====================================================================
+
 %%--------------------------------------------------------------------
 %% @doc delete a non empty directory.
 %% @spec delete_dir(Path) -> ok 
@@ -75,7 +76,7 @@ delete_dir(Path) ->
 			    symlink = element(3, LinkInfo),
 			    ok = file:delete(Path);
 			_ ->
-			    error_logger:info_msg("delete_dir/1 file does not exist ~p~n", [Path]), ok
+			    ok
 		    end;
 		true -> 
 		    ok = file:delete(Path)
@@ -277,7 +278,6 @@ uncompress(TarFilePath, TargetDirPath) ->
 	false -> file:rename(TarFilePath, RelocatedTarFilePath);
 	true  -> ok
     end,
-    error_logger:info_msg("ewl_file:uncompress ~s in ~s~n", [TarFileName, TargetDirPath]),
     Fun = fun() ->
 		  ok = erl_tar:extract(TarFileName, [compressed]),
 		  case TarFilePath == RelocatedTarFilePath of

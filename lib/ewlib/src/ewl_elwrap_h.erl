@@ -220,7 +220,7 @@ init([Wrap_server]) ->
 handle_event(Event, Wrap_server) ->
 
     case Event of
-	Event when tuple(Event) ->
+	Event when is_tuple(Event) ->
 	    Type = element(1, Event),
 	    Wrap_server ! {logit, Type};
 	_gunk ->

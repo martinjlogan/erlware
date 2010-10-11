@@ -3,16 +3,15 @@
 %%% Author  : Martin J. Logan <martinjlogan@erlware.org>
 %%% @doc 
 %%%
-%%% @type resource() = {resource_type(), resource_instance()}. The type of a resource followed by its identifier. Local
-%%%       resources are communicated to other resource discovery instances and cached by those how have the
-%%%       local resource type set as a target type. 
+%%% @type resource_tuple() = {resource_type(), resource()}. The type
+%%%       of a resource followed by the actual resource. Local
+%%%       resource tuples are communicated to other resource discovery
+%%%       instances.
 %%% @type resource_type() = atom(). The name of a resource, how it is identified. For example
 %%%       a type of service that you have on the network may be identified by it's node name
 %%%       in which case you might have a resource type of 'my_service' of which there may be
 %%%       many node names representing resources such as {my_service, myservicenode@myhost}. 
-%%% @type resource_instance() =  term() | messageable_resource_instance(). The resource being managed
-%%%       Typicaly something that can be messaged directly with "!" but can be any term.
-%%% @type messageable_resource_instance() = {name, node()} | node() | pid(). A resource that is directly messageable via "!". 
+%%% @type resource() =  term(). Either a concrete resource or a reference to one like a pid().
 %%% @end
 %%%-------------------------------------------------------------------
 -module(resource_discovery).
@@ -28,7 +27,7 @@
 
 % Add
 -export([
-         add_local_resources/1,
+         add_local_resource_tuples/1,
          add_target_types/1,
          add_callback_modules/1
         ]).
@@ -46,7 +45,7 @@
 
 % Delete
 -export([
-         delete_local_resource/1,
+         delete_local_resource_tuple/1,
          delete_target_type/1,
          delete_resource/2, 
          delete_resource/1 
@@ -63,6 +62,7 @@
          rpc_call_with_discovery/4
         ]).
 
+-include("resource_discovery.hrl").
 -include("macros.hrl").
 
 %%--------------------------------------------------------------------
@@ -92,40 +92,34 @@ start(_Type, StartArgs) ->
 %%      of resources that this instance of resource_discovery will cache following
 %%      a notification of such a resource from a resource_discovery instance.
 %%      This includes the local instance.
-%% @spec add_target_types(TargetTypes) -> ok | {error, Reason}
-%% where
-%%  TargetTypes = [resource_type()] | resource_type()
 %% @end
 %%------------------------------------------------------------------------------
+-spec add_target_types([target_type()]) -> no_return().
 add_target_types(TargetTypes) -> 
     rd_store:store_target_types(TargetTypes).
 
 %%------------------------------------------------------------------------------
-%% @doc Adds to the list of local resources. These locally resident resources 
-%%      will be broadcast out to other resource discovery instances in the current node cloud.
-%% @spec add_local_resources(LocalResources) -> ok 
-%% where
-%%  LocalResources = [resource()] | resource() 
+%% @doc Adds to the list of local resource tuples. 
 %% @end
 %%------------------------------------------------------------------------------
-add_local_resources(LocalResources) -> 
-    rd_store:store_local_resources(LocalResources).
+-spec add_local_resource_tuples([resource_tuple()]) -> no_return().
+add_local_resource_tuples(LocalResourceTuples) -> 
+    rd_store:store_local_resources(LocalResourceTuples).
 
 %%------------------------------------------------------------------------------
-%% @doc Add a callback module or modules to the list of callbacks to be called upon new resources entering the system.
-%% @spec add_callback_modules(Modules) -> ok | exit()
-%% where
-%%  Modules = atom() | [atom()]
+%% @doc Add a callback module or modules to the list of callbacks to be
+%%      called upon new resources entering the system.
 %% @end
 %%------------------------------------------------------------------------------
+-spec add_callback_modules(Modules) -> no_return().
 add_callback_modules(Modules) ->
     rd_store:store_callback_modules(Modules).
 
 %%------------------------------------------------------------------------------
 %% @doc Returns a cached resource.
-%% @spec (Type) -> {ok, resource_instance()} | {error, no_resources}
 %% @end
 %%------------------------------------------------------------------------------
+-spec get_resource(resource_type()) -> {ok, resource_instance()} | {error, no_resources}.
 get_resource(Type) ->
     gen_server:call(?RD, {get_resource, Type}). 
 
@@ -136,70 +130,72 @@ get_resource(Type) ->
 %% @spec (resource_type(), Index::integer()) -> {ok, resource_instance()} | {error, no_resources}
 %% @end
 %%------------------------------------------------------------------------------
+-spec get_resource(resource_type(), pos_integer()) -> {ok, resource_instance()} | {error, no_resources}.
 get_resource(Type, Index) ->
     gen_server:call(?RD, {get_resource, Type, Index}). 
 
 %%------------------------------------------------------------------------------
 %% @doc Returns ALL cached resources for a particular type.
-%% @spec get_all_resources(type()) -> {ok, [resource_instance()]}
 %% @end
 %%------------------------------------------------------------------------------
+-spec get_all_resources(resource_type()) -> [resource_instance()] 
 get_all_resources(Type) ->
     gen_server:call(?RD, {get_all_resources, Type}). 
 
 %%------------------------------------------------------------------------------
 %% @doc Removes a cached resource from the resource pool. Only returns after the
 %%      resource has been deleted.
-%% @spec delete_resource(resource_type(), resource_instance()) -> ok
 %% @end
 %%------------------------------------------------------------------------------
+-spec delete_resource(resource_type(), resource_instance()) -> ok.
 delete_resource(Type, Instance) ->
-    gen_server:call(?RD, {delete_resource, {Type, Instance}}).
+    delete_resource({Type, Instance}).
 
-%% @spec delete_resource(resource()) -> ok
 %% @equiv delete_resource(resource_type(), resource_instance())
-delete_resource({Type, Instance}) ->
-    delete_resource(Type, Instance).
+-spec delete_resource(resource_tuple()) -> ok.
+delete_resource(ResourceTuple = {_,_}) ->
+    gen_server:call(?RD, {delete_resource, ResourceTuple}).
 
 %%------------------------------------------------------------------------------
 %% @doc Counts the cached instances of a particular resource type.
-%% @spec get_num_resource(type()) -> {ok, integer()}
 %% @end
 %%------------------------------------------------------------------------------
+-spec get_num_resource(resource_type()) -> integer().
 get_num_resource(Type) ->
     gen_server:call(?RD, {get_num_resource, Type}). 
 
 %%------------------------------------------------------------------------------
-%% @doc Remove a target type. Returns the number of resources deleted.
-%% @spec delete_target_type(resource_type()) -> {ok, integer()}
+%% @doc Remove a target type and all associated resources. 
 %% @end
 %%------------------------------------------------------------------------------
+-spec delete_target_type(resource_type()) -> true.
 delete_target_type(Type) ->
     rd_store:delete_target_type(Type).
 
 %%------------------------------------------------------------------------------
-%% @doc Remove a local resource.
-%% @spec delete_local_resource(resource()) -> void()
+%% @doc Remove a local resource. The resource will no longer be available for
+%%      other nodes to discover once this call returns.
 %% @end
 %%------------------------------------------------------------------------------
+-spec delete_local_resource(resource()) -> no_return().
 delete_local_resource(LocalResource) ->
     rd_store:delete_local_resource(LocalResource).
 
 %%------------------------------------------------------------------------------
 %% @doc Gets a list of the types that have resources that have been cached.
-%% @spec () -> [resource_type()]
 %% @end
 %%------------------------------------------------------------------------------
-get_types() ->
-    gen_server:call(?RD, get_types). 
+-spec get_resource_types() -> [resource_type()].
+get_resource_types() ->
+    gen_server:call(?RD, get_resource_types). 
 
 %%------------------------------------------------------------------------------
 %% @doc Gets the number of resource types locally cached.
-%% @spec get_num_types() -> integer()
 %% @end
 %%------------------------------------------------------------------------------
-get_num_types() ->
-    gen_server:call(?RD, get_num_types). 
+-spec get_num_resource_types() -> integer().
+get_num_resource_types() ->
+    gen_server:call(?RD, get_num_resource_types). 
 
 %%------------------------------------------------------------------------------
 %% @doc inform the network of your existance and all the resources that are

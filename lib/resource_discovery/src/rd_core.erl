@@ -12,12 +12,27 @@
 %% API
 -export([
 	 start_link/0,
-	 store_resources/2,
-	 store_resources/1,
 	 async_inform/3,
 	 inform/4,
 	 inform/3
 	]).
+
+% Store
+-export([
+         store_local_resources/1,
+         store_callback_modules/1,
+         store_target_types/1,
+	 store_resources/2,
+	 store_resources/1,
+        ]).
+
+% Delete
+-export([
+         delete_local_resource/1,
+         delete_target_type/1,
+         delete_callback_module/1,
+         delete_resource/1
+        ]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -27,7 +42,7 @@
 
 -define(SERVER, ?MODULE). 
 
--record(state, {resources, callback_list}).
+-record(state, {}).
 
 %%%===================================================================
 %%% API
@@ -42,6 +57,63 @@
 %%--------------------------------------------------------------------
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+%%-----------------------------------------------------------------------
+%% @doc Store the callback modules for the local system.
+%% @end
+%%-----------------------------------------------------------------------
+-spec store_callback_modules([atom()]) -> no_return().
+store_callback_modules([H|_] = Modules) when is_atom(H) ->
+    gen_server:call(?SERVER, {store_callback_modules, Modules}).
+
+%%-----------------------------------------------------------------------
+%% @doc Store the target types for the local system. Store an "I Want"
+%%      type. These are the types we wish to find among the node cluster.
+%% @end
+%%-----------------------------------------------------------------------
+-spec store_target_types([atom()]) -> no_return().
+store_target_types([H|_] = TargetTypes) when is_atom(H) ->
+    gen_server:call(?SERVER, {store_target_types, TargetTypes}).
+
+%%-----------------------------------------------------------------------
+%% @doc Store the "I haves" or local_resources for resource discovery.
+%% @end
+%%-----------------------------------------------------------------------
+-spec store_local_resources([resource_tuple()]) -> ok.
+store_local_resources([{_,_}|_] = LocalResourceTuples) ->
+    gen_server:call(?SERVER, {store_local_resources, LocalResourceTuples}).
+
+%%-----------------------------------------------------------------------
+%% @doc Remove a callback module.
+%% @end
+%%-----------------------------------------------------------------------
+-spec delete_callback_module(atom()) -> true.
+delete_callback_module(CallBackModule) ->
+    gen_server:call(?SERVER, {delete_callback_module, CallBackModule}).
+
+%%-----------------------------------------------------------------------
+%% @doc Remove a target type.
+%% @end
+%%-----------------------------------------------------------------------
+-spec delete_target_type(atom()) -> true.
+delete_target_type(TargetType) ->
+    gen_server:call(?SERVER, {delete_target_type, TargetType}).
+
+%%-----------------------------------------------------------------------
+%% @doc Remove a local resource.
+%% @end
+%%-----------------------------------------------------------------------
+-spec delete_local_resource(resource_tuple()) -> true.
+delete_local_resource(LocalResourceTuple) ->
+    gen_server:call(?SERVER, {delete_local_resource, LocalResourceTuple}).
+
+%%-----------------------------------------------------------------------
+%% @doc Remove a resource.
+%% @end
+%%-----------------------------------------------------------------------
+-spec delete_resource(resource_tuple()) -> true.
+delete_resource({_,_} = ResourceTuple) ->
+    gen_server:call(?SERVER, {delete_resource, ResourceTuple}).
 
 %%--------------------------------------------------------------------
 %% @doc Cache resources for future use.
@@ -58,162 +130,76 @@ store_resources(Resources) ->
 
 %%--------------------------------------------------------------------
 %% @doc inform an rd_core server of local resources and target types.
-%%      This returns with a list of resources from the remove server 
-%%      that match the target types specified.
-%% @spec (Node, TargetTypes, LocalResources, Timeout) -> {ok, RemoteResources}
-%% where
-%%  TargetTypes = [resource_type()]
-%%  LocalResources = [resource()]
-%%  RemoteResources = [resource()]
-%% @end
-%%--------------------------------------------------------------------
-inform(Node, TargetTypes, LocalResources, Timeout) ->
-    gen_server:call({?SERVER, Node}, {inform, {TargetTypes, LocalResources}}, Timeout).
-
-%% @spec (Node, TargetTypes, LocalResources) -> {ok, RemoteResources}
-%% @equiv inform(Node, TargetTypes, LocalResources, 60000) 
-inform(Node, TargetTypes, LocalResources) ->
-    inform(Node, TargetTypes, LocalResources, 60000).
-
-%%--------------------------------------------------------------------
-%% @doc inform an rd_core server of local resources and target types.
 %%      This will prompt the remote servers to asyncronously send
 %%      back remote resource information.
-%% @spec (Node, TargetTypes, LocalResources) -> ok
-%% where
-%%  TargetTypes = [resource_type()]
-%%  LocalResources = [resource()]
-%%  RemoteResources = [resource()]
 %% @end
 %%--------------------------------------------------------------------
-async_inform(Node, TargetTypes, LocalResources) ->
-    gen_server:cast({?SERVER, Node}, {async_inform, {node(), TargetTypes, LocalResources}}).
+-spec trade_resources() -> ok.
+trade_resources() ->
+    gen_server:cast({?SERVER, Node}, trade_resources).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Initiates the server
-%%
-%% @spec init(Args) -> {ok, State} |
-%%                     {ok, State, Timeout} |
-%%                     ignore |
-%%                     {stop, Reason}
-%% @end
-%%--------------------------------------------------------------------
 init([]) ->
-    ?INFO_MSG("~n", []),
-    {ok, #state{resources = rd_store:lookup_resource_struct(), callback_list = rd_store:lookup_callback_modules()}}.
+    error_logger:info_msg("~n", []),
+    {ok, #state{}}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling call messages
-%%
-%% @spec handle_call(Request, From, State) ->
-%%                                   {reply, Reply, State} |
-%%                                   {reply, Reply, State, Timeout} |
-%%                                   {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, Reply, State} |
-%%                                   {stop, Reason, State}
-%% @end
-%%--------------------------------------------------------------------
-handle_call({get_resource, Type}, _From, #state{resources = Resources} = State) ->
-    case rd_store:round_robin_lookup(Type, Resources) of 
-	{ok, {Resource, NewResources}} -> {reply, {ok, Resource}, State#state{resources = NewResources}};
-	{error, _}                     -> {reply, {error, no_resources}, State}
-    end;
-handle_call({get_resource, Type, Index}, _From, #state{resources = Resources} = State) ->
-    case rd_store:index_lookup(Type, Index, Resources) of 
-	{ok, Resource} -> {reply, {ok, Resource}, State};
-	{error, _}     -> {reply, {error, no_resources}, State}
-    end;
-handle_call({get_all_resources, Type}, _From, State) ->
-    {reply, {ok, rd_store:lookup_all_resources(Type, State#state.resources)}, State};
-handle_call({get_num_resource, Type}, _From, State) ->
-    {reply, {ok, rd_store:lookup_num_resources(Type, State#state.resources)}, State};
+handle_call({store_callback_modules, Modules}, _From, State) ->
+    rd_store:store_callback_modules(Modules),
+    {reply, ok, State};
+handle_call({store_target_types, TargetTypes}, _From, State) ->
+    rd_store:store_target_types(TargetTypes),
+    {reply, ok, State};
+handle_call({store_local_resources, LocalResourceTuples}, _From, State) ->
+    rd_store:store_local_resources(LocalResourceTuples),
+    {reply, ok, State};
 
-%% Get the number of types on the network 
-handle_call(get_num_types, _From, State) ->
-    {reply, {ok, rd_store:lookup_num_types(State#state.resources)}, State};
+handle_call({delete_callback_module, Module}, _From, State) ->
+    rd_store:delete_callback_module(Module),
+    {reply, ok, State};
+handle_call({delete_target_type, TargetType}, _From, State) ->
+    rd_store:delete_target_type(TargetType),
+    {reply, ok, State};
+handle_call({delete_local_resource, LocalResourceTuple}, _From, State) ->
+    rd_store:delete_local_resource(LocalResourceTuple),
+    {reply, ok, State};
+handle_call({delete_resource, ResourceTuple}, _From, State) ->
+    rd_store:delete_local_resource(ResourceTuple),
+    {reply, ok, State};
 
-%% Get a list of types that we have.
-handle_call(get_types, _From, State) ->
-    {reply, {ok, rd_store:lookup_types(State#state.resources)}, State};
+handle_cast(trade_resources, State) ->
+    ResourceTuples = rd_store:lookup_local_resources(),
+    lists:foreach(
+        fun(Node) ->
+            gen_server:cast({?SERVER, Node},
+                            {trade_resources, {node(), ResourceTuples}})
+        end,
+        nodes(known)),
+    {noreply, State};
+handle_cast({trade_resources, {ReplyTo, Remotes}}, State) ->
+    Locals = rd_store:lookup_local_resources(),
+    TargetTypes = rd_store:lookup_target_types(),
+    FilteredRemotes = filter_resource_tuples_by_types(TargetTypes, Remotes),
+    [rd_store:store_resource(RemoteResourceTuple) ||
+	RemoteResourceTuple <- FilteredRemotes],
+    case ReplyTo of
+        noreply ->
+            ok;
+        _ ->
+            gen_server:cast({?SERVER, ReplyTo},
+                            {trade_resources, {noreply, Locals}})
+    end,
+    {noreply, State}.
 
-handle_call({delete_resource, {Type, Instance}}, _From, #state{resources = Resources} = State) ->
-    ?INFO_MSG("remove resource:: ~p~n", [{Type, Instance}]),
-    NewResources = rd_store:delete_resource(Type, Instance, Resources),
-    {reply, ok, State#state{resources = NewResources}};
-handle_call({inform, {TargetTypes, RemoteResources}}, _From, #state{resources = Resources} = State) ->
-    ?INFO_MSG("just informed by network of the following remote resources ~p~n", [RemoteResources]),
-    NewResources = rd_store:store_resources(is_of_target_types(rd_store:lookup_target_types(), RemoteResources), Resources),
-    make_callbacks(rd_store:lookup_callback_modules(), NewResources),
-    {reply, {ok, is_of_target_types(TargetTypes, rd_store:lookup_local_resources())}, State#state{resources = NewResources}}.
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling cast messages
-%%
-%% @spec handle_cast(Msg, State) -> {noreply, State} |
-%%                                  {noreply, State, Timeout} |
-%%                                  {stop, Reason, State}
-%% @end
-%%--------------------------------------------------------------------
-handle_cast({store_resources, RemoteResources}, #state{resources = Resources} = State) ->
-    ?INFO_MSG("storing remote resources ~p~n", [RemoteResources]),
-    NewResources = rd_store:store_resources(is_of_target_types(rd_store:lookup_target_types(), RemoteResources), Resources),
-    make_callbacks(rd_store:lookup_callback_modules(), RemoteResources),
-    {noreply, State#state{resources = NewResources}};
-handle_cast({async_inform, {FromNode, TargetTypes, RemoteResources}}, #state{resources = Resources} = State) ->
-    ?INFO_MSG("just informed async from ~p of the following remote resources ~p~n", [FromNode, RemoteResources]),
-    NewResources = rd_store:store_resources(is_of_target_types(rd_store:lookup_target_types(), RemoteResources), Resources),
-    make_callbacks(rd_store:lookup_callback_modules(), NewResources),
-    ReturnResources = is_of_target_types(TargetTypes, rd_store:lookup_local_resources()),
-    store_resources(FromNode, ReturnResources),
-    {noreply, State#state{resources = NewResources}}.
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling all non call/cast messages
-%%
-%% @spec handle_info(Info, State) -> {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, State}
-%% @end
-%%--------------------------------------------------------------------
 handle_info(_Info, State) ->
     {noreply, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% This function is called by a gen_server when it is about to
-%% terminate. It should be the opposite of Module:init/1 and do any
-%% necessary cleaning up. When it returns, the gen_server terminates
-%% with Reason. The return value is ignored.
-%%
-%% @spec terminate(Reason, State) -> void()
-%% @end
-%%--------------------------------------------------------------------
 terminate(_Reason, _State) ->
-    ?INFO_MSG("", []),
+    error_logger:info_msg("", []),
     ok.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Convert process state when code is changed
-%%
-%% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
-%% @end
-%%--------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
@@ -225,7 +211,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% @doc return a list of resources that have a resource_type() found in the target
 %%      types list.
 %% @end
-is_of_target_types(TargetTypes, Resources) ->
+filter_resource_tuples_by_types(TargetTypes, Resources) ->
     Fun = 
 	fun({Type, _Instance} = Resource, Acc) ->
 		case lists:member(Type, TargetTypes) of
@@ -243,5 +229,3 @@ make_callbacks(CallBackModules, NewResources) ->
 	      lists:foreach( fun(Resource) -> spawn(fun() -> Module:resource_up(Resource) end) end, NewResources)
       end,
       CallBackModules).
-
-					 
