@@ -38,7 +38,9 @@
 	 find/2,
 	 delete_dir/1,
 	 copy_dir/2,
+	 copy_file/2,
 	 create_tmp_dir/1,
+	 make_tmp_dir/0,
 	 mkdir_p/1,
 	 compress/2,
 	 uncompress/1,
@@ -76,33 +78,44 @@ delete_dir(Path) ->
 		    ok = file:delete(Path)
 	    end;
 	true ->
-	    lists:foreach(fun(ChildPath) -> delete_dir(ChildPath) end, filelib:wildcard(Path ++ "/*")),
+	    lists:foreach(fun(ChildPath) -> delete_dir(ChildPath) end, filelib:wildcard(filename:join(Path, "*"))),
 	    ok = file:del_dir(Path)
     end.
 
 %%--------------------------------------------------------------------
-%% @doc copy an entire directory to another location.
+%% @doc copy an entire directory to another location. 
 %% @spec copy_dir(From, To) -> ok
 %% @end
 %%--------------------------------------------------------------------
 copy_dir(From, To) ->
     case filelib:is_dir(From) of
 	false ->
-	    case file:copy(From, To) of
-		{ok, _}         -> ok;
+	    case copy_file(From, To) of
+		ok              -> ok;
 		{error, enoent} -> throw({error, {enoent, From, To}})
 	    end;
 	true ->
 	    case filelib:is_dir(To) of
 		true  -> ok;
-		false -> ok = file:make_dir(To)
+		false -> ok = mkdir_p(To)
 	    end,
 	    lists:foreach(fun(ChildFrom) -> 
 				  copy_dir(ChildFrom, lists:flatten([To, "/", filename:basename(ChildFrom)]))
-			  end, filelib:wildcard(From ++ "/*"))
+			  end, filelib:wildcard(filename:join(From, "*")))
     end.
 
 %%--------------------------------------------------------------------
+%% @doc copy a file including timestamps,ownership and mode etc.
+%% @spec copy_file(From::string(), To::string()) -> ok | {error, Reason}
+%% @end
+%%--------------------------------------------------------------------
+copy_file(From, To) ->
+    {ok, _} = file:copy(From, To),
+    {ok, FileInfo} = file:read_file_info(From),
+    file:write_file_info(To, FileInfo). 
+
+%%--------------------------------------------------------------------
+%% @deprecated Please use the function {@link make_tmp_dir} instead.
 %% @doc create a unique temorory directory.
 %% @spec create_tmp_dir(Prefix::string()) -> {ok, TmpDirPath} | {error, Reason}
 %% @end
@@ -113,7 +126,28 @@ create_tmp_dir(Prefix) ->
 	ok    -> {ok, TmpDirPath};
 	Error -> Error
     end.
+
+%%--------------------------------------------------------------------
+%% @doc make a unique temorory directory.
+%% @spec make_tmp_dir() -> TmpDirPath
+%% @end
+%%--------------------------------------------------------------------
+make_tmp_dir() ->
+    TmpDirPath = filename:join([tmp(), lists:flatten([".tmp_dir", integer_to_list(element(3, now()))])]),
+    try
+	ok = mkdir_p(TmpDirPath),
+	TmpDirPath
+    catch
+	_C:E -> throw({make_tmp_dir_failed, E})
+    end.
 	     
+tmp() ->
+    case erlang:system_info(system_architecture) of
+	"win32" ->
+	    throw(tmp_dir_not_supported_on_windows);
+	_SysArch ->
+	    "/tmp"
+    end.
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -223,7 +257,7 @@ find(FromDir, TargetPattern) ->
 				    []  -> Acc;
 				    Res -> Res ++ Acc
 				end
-			end, [], filelib:wildcard(FromDir ++ "/*")),
+			end, [], filelib:wildcard(filename:join(FromDir, "*"))),
 	    FoundDir ++ List
     end.
 

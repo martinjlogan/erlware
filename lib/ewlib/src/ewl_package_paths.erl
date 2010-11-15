@@ -9,6 +9,7 @@
 
 %% API
 -export([
+	 dot_app_file_path/1,
 	 package_dir_path/3,
 	 release_package_library_path/1,
 	 release_package_control_file_path/1,
@@ -77,6 +78,18 @@ release_package_erts_package_path(ReleasePackagePath, ErtsVsn) ->
 %%--------------------------------------------------------------------
 release_package_control_file_path(ReleasePackagePath) ->
     ewl_file:join_paths(ReleasePackagePath, "control").
+
+%%--------------------------------------------------------------------
+%% @doc Return the path to the .app file within an application path
+%% @spec release_package_control_file_path(ReleasePackagePath) -> string()
+%% @end 
+%%--------------------------------------------------------------------
+dot_app_file_path(PackagePath) ->
+    EbinPath = ewl_file:join_paths(PackagePath, "ebin"),
+    [DotAppFilePath] = filelib:wildcard(EbinPath ++ "*.app"),
+    DotAppFilePath.
+    
+    
 
 %%====================================================================
 %% Internal functions

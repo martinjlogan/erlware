@@ -47,7 +47,7 @@ release_container_path(InstallationPath) ->
 %% @spec application_container_path(InstallationPath, ErtsVsn) -> string()
 %% @end
 %%--------------------------------------------------------------------
-application_container_path(InstallationPath, ErtsVsn) ->
+application_container_path(InstallationPath, _ErtsVsn) ->
     filename:join([InstallationPath, "lib"]).
 
 %%--------------------------------------------------------------------
@@ -63,7 +63,7 @@ executable_container_path(InstallationPath) when is_list(InstallationPath) ->
 %% @spec erts_container_path(InstallationPath, ErtsVsn) -> string()
 %% @end
 %%--------------------------------------------------------------------
-erts_container_path(InstallationPath, ErtsVsn) -> 
+erts_container_path(InstallationPath, _ErtsVsn) -> 
     InstallationPath.
 
 %%--------------------------------------------------------------------
