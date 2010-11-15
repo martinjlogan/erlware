@@ -1,3 +1,4 @@
+
 %%%-------------------------------------------------------------------
 %%% Copyright (c) 2006-2010 Erlware
 %%%
@@ -155,7 +156,7 @@ ask_convert(Prompt, TransFun, Type,  Default) ->
 			      Default ->
 				  " (" ++ sin_utils:term_to_list(Default) ++ ")"
 			  end ++ "> ",
-    Data = string:strip(string:strip(io:get_line(NewPrompt)), both, $\n),
+    Data = string:strip(io:get_line(NewPrompt)),
     Ret = TransFun(Data),
     case Ret of
 	no_data ->
