@@ -71,7 +71,7 @@ ping (Node, Seconds, Result) ->
 sync_ping(Node, Timeout) ->
     case net_adm:ping(Node) of
         pong ->
-            case fs_time:poll_until(fun() -> lists:member(Node,[node()|nodes()]) end, 500, Timeout / 500) of
+            case fs_time:poll_until(fun() -> lists:member(Node,nodes(known)) end, 500, Timeout / 500) of
                 true  -> pong;
                 false -> pang
             end;

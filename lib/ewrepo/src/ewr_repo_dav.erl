@@ -17,6 +17,7 @@
 -export([
 	 repo_get/3,
 	 repo_put/4,
+	 repo_list/3,
 	 repo_mkcol/3
         ]).
 
@@ -51,11 +52,11 @@ repo_get([$f,$i,$l,$e,$:,$/,$/|Repo] = FullRepo, Suffix, Timeout) ->
     FilePath = ewl_file:join_paths(Repo, Suffix),
     file:read_file(FilePath);
 repo_get([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
-    AuthOptions = [],
-    repo_get_with_auth(Repo, Suffix, Timeout, AuthOptions);
+    AuthOpts = [],
+    repo_get_with_auth(Repo, Suffix, Timeout, AuthOpts);
 repo_get([$h,$t,$t,$p,$s,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
-    AuthOptions = ewr_util:get_auth_options(Repo),
-    repo_get_with_auth(Repo, Suffix, Timeout, AuthOptions).
+    AuthOpts = ewr_util:get_auth_options(Repo),
+    repo_get_with_auth(Repo, Suffix, Timeout, AuthOpts).
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -89,11 +90,11 @@ repo_put([$f,$i,$l,$e,$:,$/,$/|Repo] = FullRepo, Suffix, Payload, _Timeout) ->
 	Error -> Error
     end;
 repo_put([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Payload, Timeout) ->
-    AuthOptions = [],
-    repo_put_with_auth(Repo, Suffix, Payload, Timeout, AuthOptions);
+    AuthOpts = [],
+    repo_put_with_auth(Repo, Suffix, Payload, Timeout, AuthOpts);
 repo_put([$h,$t,$t,$p,$s,$:,$/,$/|_] = Repo, Suffix, Payload, Timeout) ->
-    AuthOptions = ewr_util:get_auth_options(Repo),
-    repo_put_with_auth(Repo, Suffix, Payload, Timeout, AuthOptions).
+    AuthOpts = ewr_util:get_auth_options(Repo),
+    repo_put_with_auth(Repo, Suffix, Payload, Timeout, AuthOpts).
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -126,15 +127,57 @@ repo_mkcol([$f,$i,$l,$e,$:,$/,$/|Repo], Suffix, _Timeout) ->
 	    {error, E}
     end;
 repo_mkcol([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
-    AuthOptions = [],
-    repo_mkcol_with_auth(Repo, Suffix, Timeout, AuthOptions);
+    AuthOpts = [],
+    repo_mkcol_with_auth(Repo, Suffix, Timeout, AuthOpts);
 repo_mkcol([$h,$t,$t,$p,$s,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
-    AuthOptions = ewr_util:get_auth_options(Repo),
-    repo_mkcol_with_auth(Repo, Suffix, Timeout, AuthOptions).
+    AuthOpts = ewr_util:get_auth_options(Repo),
+    repo_mkcol_with_auth(Repo, Suffix, Timeout, AuthOpts).
 
-%%====================================================================
-%% Internal functions
-%%====================================================================
+%%-------------------------------------------------------------------
+%% @doc
+%% Return a the contents of a directory.
+%% @end
+%%-------------------------------------------------------------------
+-spec repo_list(Url::string(), Suffix::string(), Timeout::non_neg_integer()) ->
+    {ok, DirContents::list()} | {error, Reason::term()}.
+repo_list([$f,$i,$l,$e,$:,$/,$/|Repo], Suffix, _Timeout) ->
+    FullPath = filename:join([Repo, Suffix, "*"]), 
+    try
+	{ok, [filename:basename(E) || E <- filelib:wildcard(FullPath)]}
+    catch
+	_C:_E ->
+	    {error,{repo_list, FullPath}}
+    end;
+repo_list([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
+    repo_list_with_auth(Repo, Suffix, Timeout, []);
+repo_list([$h,$t,$t,$p,$s,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
+    AuthOpts = get_auth_options(Repo),
+    repo_list_with_auth(Repo, Suffix, Timeout, AuthOpts).
+
+
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
+repo_list_with_auth(Repo, Suffix, Timeout, AuthOpts) ->
+    Url = ewl_file:join_paths(Repo, Suffix), 
+    Opts = [{"Connection", "TE"},
+	    {"TE", "trailers"},
+	    {"Depth", "1"},
+	    {"Content-Type", "application/xml"}],
+    case catch ibrowse:send_req(Url, Opts, propfind, "", AuthOpts, Timeout) of
+        {ok, "207", _, Body} -> 
+	    {ok, parse_out_package_versions(Body)};
+	{ok, Code, _, _} -> 
+	    {error, {"No list found. http code: ", Code}};
+        {error, _Reason} = Res -> 
+	    Res;
+        {'EXIT', Reason} -> 
+            {error, Reason}
+    end.
+    
+parse_out_package_versions(Body) ->
+    {Elem, _} = xmerl_scan:string(Body),
+    [filename:basename(E) || E <- tl(lists:sort(xmerl_xs:value_of(xmerl_xs:select("//D:href", Elem))))].
 
 handle_ibrowse_return(Result, AcceptableCodes) ->
     case Result of
@@ -151,33 +194,106 @@ handle_ibrowse_return(Result, AcceptableCodes) ->
 	    Error
     end.
     
-repo_get_with_auth(Repo, Suffix, Timeout, AuthOptions) ->
+repo_get_with_auth(Repo, Suffix, Timeout, AuthOpts) ->
     error_logger:info_msg("ewr_repo_dav:repo_get(~p, ~p, ~p)~n", [Repo, Suffix, Timeout]),
     URL = ewl_file:join_paths(Repo, Suffix),
-    Res = ibrowse:send_req(URL, [], get, [], AuthOptions, Timeout),
+    Res = ibrowse:send_req(URL, [], get, [], AuthOpts, Timeout),
     handle_ibrowse_return(Res, ["200"]).
 
-repo_put_with_auth(Repo, Suffix, Payload, Timeout, AuthOptions) ->
+repo_put_with_auth(Repo, Suffix, Payload, Timeout, AuthOpts) ->
     %% Creates the directory structure within the repo.
     repo_mkcol(Repo, filename:dirname(Suffix), Timeout),
     URL = ewl_file:join_paths(Repo, Suffix),
     error_logger:info_msg("ewr_repo_dav:repo_put putting to ~p~n", [URL]),
-    Res = (catch ibrowse:send_req(URL, [], put, Payload, AuthOptions, Timeout)),
+    Res = (catch ibrowse:send_req(URL, [], put, Payload, AuthOpts, Timeout)),
     case handle_ibrowse_return(Res, ["200", "201"]) of
         {ok, _} -> {ok, URL};
         Error   -> Error
     end.
 
-repo_mkcol_with_auth(Repo, Suffix, Timeout, AuthOptions) ->
+repo_mkcol_with_auth(Repo, Suffix, Timeout, AuthOpts) ->
     (catch lists:foldl(fun(PathElement, Acc) -> 
                     NewAcc = Acc ++ PathElement ++ "/",
                     URL    = ewl_file:join_paths(Repo, NewAcc),
                     error_logger:info_msg("mkcol  on ~p~n", [URL]),
                     %% In place for the build in logging
                     handle_ibrowse_return(
-                        ibrowse:send_req(URL, [], mkcol, [], AuthOptions, Timeout),
+                        ibrowse:send_req(URL, [], mkcol, [], AuthOpts, Timeout),
                         ["200", "201"]),
                     NewAcc
             end, [], string:tokens(Suffix, "/"))),
     ok.
+
+get_auth_options(Repo) ->
+    case file:consult(auth_file()) of
+        {ok, Terms} ->
+            lookup_url(Repo, Terms);
+        {error, Error} ->
+            error_logger:info_msg("Could not find auth options for repo~p (reason: ~p)~n", [Repo, Error]),
+            []
+    end.
+
+auth_file() ->
+    FaxAuth = filename:join(home_dir(), ".faxien.auth"),
+    case filelib:is_file(FaxAuth) of
+	false ->
+	    filename:join(home_dir(), ".erlang.auth");
+	true ->
+	    FaxAuth
+    end.
+	    
+lookup_url(URL, TermList) ->
+    case proplists:get_value(faxien_secrets, TermList) of
+        PropList when is_list(PropList) ->
+            get_auth_for_url(URL, PropList);
+        undefined ->
+            error_logger:info_msg("Missing faxien_secrets in secrets file for repo ~p~n", [URL]),
+            [];
+        _Other ->
+            error_logger:info_msg("Wrong format for faxien_secrets in secrets file for repo ~p: ~p~n", [URL, _Other]),
+            []
+    end.
+
+get_auth_for_url(URL, PropList) ->
+    case [Tuple || {K, _} = Tuple <- PropList, lists:prefix(K, URL)] of
+        [] = L ->
+            error_logger:info_msg("No auth options for repo ~p~n", [URL]),
+            L;
+        [{_K, AuthOpts}] ->
+            check_ssl(AuthOpts),
+            AuthOpts;
+        [{_K, AuthOpts}|_] ->
+            error_logger:info_msg("More than one matching auth option for repo ~p, first one used~n", [URL]),
+            check_ssl(AuthOpts),
+            AuthOpts
+    end.
+
+home_dir() ->
+    case os:getenv("HOME") of
+        undefined ->
+            error_logger:info_msg("The HOME environment variable is not set~n"),
+            "."; % Default to current dir
+        Home ->
+            Home
+    end.
+
+check_ssl(AuthOpts) when is_list(AuthOpts) ->
+    case proplists:get_value(is_ssl, AuthOpts) of
+        true ->
+            start_ssl();
+        _ ->
+            ok
+    end.
+
+start_ssl() ->
+    case application:start(ssl) of
+        {error,{already_started,_}} ->
+            ok;
+        {error, Reason} = Error ->
+            error_logger:info_msg("Failed to start ssl, error:~n~p~n", [Reason]),
+            Error;
+        ok ->
+            ssl:seed(term_to_binary(make_ref())),
+            ok
+    end.
 
