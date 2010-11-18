@@ -155,7 +155,7 @@ ask_convert(Prompt, TransFun, Type,  Default) ->
 			      Default ->
 				  " (" ++ sin_utils:term_to_list(Default) ++ ")"
 			  end ++ "> ",
-    Data = string:strip(io:get_line(NewPrompt)),
+    Data = string:strip(string:strip(io:get_line(NewPrompt)), both, $\n),
     Ret = TransFun(Data),
     case Ret of
 	no_data ->
