@@ -40,6 +40,7 @@ config_files(FilePath1, FilePath2) ->
 %%   Diff = term() | {added, term()} | {removed, term()}
 %% @end
 %%--------------------------------------------------------------------
+-spec diff_avl([{atom(), term()}], [{atom(), term()}]) -> [term()].
 diff_avl([{Key, Val}|T], AVL2) ->
     Value = case lists:keysearch(Key, 1, AVL2) of
 		{value, {Key, Val}} ->

@@ -36,6 +36,8 @@
 -export([
 	 join_paths/2,
 	 find/2,
+	 md5/1,
+	 md5_checksum/1,
 	 delete_dir/1,
 	 copy_dir/2,
 	 copy_file/2,
@@ -43,6 +45,7 @@
 	 make_tmp_dir/0,
 	 mkdir_p/1,
 	 compress/2,
+	 compress/3,
 	 uncompress/1,
 	 uncompress/2,
 	 gsub_file/3
@@ -56,6 +59,7 @@
 %%====================================================================
 %% External functions
 %%====================================================================
+
 %%--------------------------------------------------------------------
 %% @doc delete a non empty directory.
 %% @spec delete_dir(Path) -> ok 
@@ -72,7 +76,7 @@ delete_dir(Path) ->
 			    symlink = element(3, LinkInfo),
 			    ok = file:delete(Path);
 			_ ->
-			    error_logger:info_msg("delete_dir/1 file does not exist ~p~n", [Path]), ok
+			    ok
 		    end;
 		true -> 
 		    ok = file:delete(Path)
@@ -81,6 +85,35 @@ delete_dir(Path) ->
 	    lists:foreach(fun(ChildPath) -> delete_dir(ChildPath) end, filelib:wildcard(filename:join(Path, "*"))),
 	    ok = file:del_dir(Path)
     end.
+
+
+%%-------------------------------------------------------------------
+%% @doc return an md5 checksum string of a binary.
+%% @spec (Bin) -> string()
+%% @end
+%%-------------------------------------------------------------------
+md5_checksum(Bin) ->
+    MD5 = md5(Bin),
+    list_to_binary(io_lib:fwrite("~s", [MD5])).
+
+%%-------------------------------------------------------------------
+%% @doc return the hex encoded md5 string for a binary
+%% @spec (Bin) -> string()
+%% @end
+%%-------------------------------------------------------------------
+md5(Bin) -> hex(binary_to_list(erlang:md5(Bin))).
+
+hex(L) when is_list (L) -> lists:flatten([hex(I) || I <- L]);
+hex(I) when I > 16#f -> [hex0((I band 16#f0) bsr 4), hex0((I band 16#0f))];
+hex(I)               -> [$0, hex0(I)].
+
+hex0(10) -> $a;
+hex0(11) -> $b;
+hex0(12) -> $c;
+hex0(13) -> $d;
+hex0(14) -> $e;
+hex0(15) -> $f;
+hex0(I) ->  $0 + I.
 
 %%--------------------------------------------------------------------
 %% @doc copy an entire directory to another location. 
@@ -184,15 +217,49 @@ mkdir_p(Path) ->
 %%-------------------------------------------------------------------
 compress(TarFilePath, TargetFilePath) ->
     %% Wrapping this just in case we have to go back to os specific code - I am tired of changing this all over the place :) 
-    TarFileName = filename:basename(TarFilePath),
     TargetFileName = filename:basename(TargetFilePath),
+    BaseDir = filename:dirname(TargetFilePath),
+    compress(TarFilePath, [TargetFileName], [compressed, verbose, {cd, BaseDir}]).
+
+%%-------------------------------------------------------------------
+%% @doc Just like erl tar but gives you the cd option to run the tar
+%%      command from a particular directory.
+%% <pre>
+%% Variables:
+%%  TarFilePath - The name or path to the file to be produced as a result of the tar command.
+%%  FileList - The list of files to add to the tar.
+%%  Options - Tar options
+%%
+%% Examples:
+%%  compress("foo.tar.gz", ["erlware/foo"], [{cd, "/usr/local/"}])  
+%%   This will compress from the directory /usr/local 
+%%
+%%  compress("/home/martinjlogan/foo.tar.gz", ["tmp/foo"], []) % Will put foo.tar.gz into /home/martinjlogan
+%% </pre>
+%% @spec compress(TarFilePath::string(), FileList::list(), OptionsList) -> ok | exit()
+%% where
+%%  OptionsList = RegularErlTarOpts | {cd, Path} 
+%% @end
+%%-------------------------------------------------------------------
+compress(TarFilePath, FileList, OptionsList) ->
+    TarFileName = filename:basename(TarFilePath),
+    BaseDir = get_base_dir(OptionsList),
 
     Fun = fun() ->
-		  erl_tar:create(TarFileName, [TargetFileName], [compressed, verbose]),
+		  erl_tar:create(TarFileName, FileList, lists:keydelete(cd, 1, OptionsList)),
 		  file:rename(TarFileName, TarFilePath)
 	  end,
-    run_in_location(Fun, filename:dirname(TargetFilePath)).
-    
+    run_in_location(Fun, BaseDir).
+
+get_base_dir(OptionsList) ->
+    case lists:keyfind(cd, 1, OptionsList) of
+	false ->
+	    {ok, CWD} = file:get_cwd(),
+	    CWD;
+	{cd, Path} ->
+	    Path
+    end.
+
 %%-------------------------------------------------------------------
 %% @doc Uncompress a file or directory using the native os compression system. For linux/unix it is tar. 
 %% <pre>
@@ -211,7 +278,6 @@ uncompress(TarFilePath, TargetDirPath) ->
 	false -> file:rename(TarFilePath, RelocatedTarFilePath);
 	true  -> ok
     end,
-    error_logger:info_msg("ewl_file:uncompress ~s in ~s~n", [TarFileName, TargetDirPath]),
     Fun = fun() ->
 		  ok = erl_tar:extract(TarFileName, [compressed]),
 		  case TarFilePath == RelocatedTarFilePath of
@@ -324,9 +390,14 @@ remove_trailing_slash(String) ->
 run_in_location(Fun, Path) ->
     {ok, CWD} = file:get_cwd(),
     ok = file:set_cwd(Path),
-    Result = Fun(),
-    ok = file:set_cwd(CWD),
-    Result.
+    try
+	Fun()
+    catch
+	_C:E ->
+	    throw({failed_to_run_command_in, Path, E})
+    after
+	file:set_cwd(CWD)
+    end.
 
 %%%====================================================================
 %%% Unit Tests

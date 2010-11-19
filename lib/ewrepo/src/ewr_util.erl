@@ -59,8 +59,7 @@
         app_name/1,
         fetch_local_appfile_key_values/2,
         handle_cygwin_path/1,
-        is_version_greater/2,
-        get_auth_options/1
+        is_version_greater/2
     ]).
 
 %%====================================================================
@@ -472,15 +471,6 @@ handle_cygwin_dir(Dir) ->
         _             -> Dir
     end.
 
-get_auth_options(Repo) ->
-    case file:consult(filename:join(home_dir(), ".faxien.secrets")) of
-        {ok, Terms} ->
-            lookup_url(Repo, Terms);
-        {error, Error} ->
-            error_logger:info_msg("Could not find auth options for repo~p (reason: ~p)~n", [Repo, Error]),
-            []
-    end.
-
 %%====================================================================
 %% Internal Functions
 %%====================================================================
@@ -673,59 +663,4 @@ chop_sys_info_test() ->
 
 is_posix_test() ->
     ?assertMatch(true, is_posix("i686-pc-linux-gnu")).
-
-lookup_url(URL, TermList) ->
-    case proplists:get_value(faxien_secrets, TermList) of
-        PropList when is_list(PropList) ->
-            get_auth_for_url(URL, PropList);
-        undefined ->
-            error_logger:info_msg("Missing faxien_secrets in secrets file for repo ~p~n", [URL]),
-            [];
-        _Other ->
-            error_logger:info_msg("Wrong format for faxien_secrets in secrets file for repo ~p: ~p~n", [URL, _Other]),
-            []
-    end.
-
-get_auth_for_url(URL, PropList) ->
-    case [Tuple || {K, _} = Tuple <- PropList, lists:prefix(K, URL)] of
-        [] = L ->
-            error_logger:info_msg("No auth options for repo ~p~n", [URL]),
-            L;
-        [{_K, AuthOpts}] ->
-            check_ssl(AuthOpts),
-            AuthOpts;
-        [{_K, AuthOpts}|_] ->
-            error_logger:info_msg("More than one matching auth option for repo ~p, first one used~n", [URL]),
-            check_ssl(AuthOpts),
-            AuthOpts
-    end.
-
-home_dir() ->
-    case os:getenv("HOME") of
-        undefined ->
-            error_logger:info_msg("The HOME environment variable is not set~n"),
-            "."; % Default to current dir
-        Home ->
-            Home
-    end.
-
-check_ssl(AuthOpts) when is_list(AuthOpts) ->
-    case proplists:get_value(is_ssl, AuthOpts) of
-        true ->
-            start_ssl();
-        _ ->
-            ok
-    end.
-
-start_ssl() ->
-    case application:start(ssl) of
-        {error,{already_started,_}} ->
-            ok;
-        {error, Reason} = Error ->
-            error_logger:info_msg("Failed to start ssl, error:~n~p~n", [Reason]),
-            Error;
-        ok ->
-            ssl:seed(term_to_binary(make_ref())),
-            ok
-    end.
 
