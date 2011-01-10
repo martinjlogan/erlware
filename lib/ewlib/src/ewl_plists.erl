@@ -141,6 +141,15 @@ pfilter_timeout_test() ->
     ?assertMatch([true],
                  Results).
 
+pmap_timeout_test() ->
+    Results = map(fun(X) ->
+                          timer:sleep(X),
+                          true
+                  end,
+                  [100, 1], 10),
+    ?assertMatch([timeout, true],
+                 Results).
+
 pmap_bad_test() ->
     Results = map(fun(_) ->
                           erlang:throw(test_exception)
