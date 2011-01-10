@@ -10,7 +10,8 @@
 	     ewl_config_diff,
 	     ewl_installed_paths,
 	     ewl_package_paths,
-	     ewl_sinan_paths
+	     ewl_sinan_paths,
+         ewl_plists
 	    ]},
   {registered, []},
   {applications, [kernel, stdlib, sasl, eunit]}]}.

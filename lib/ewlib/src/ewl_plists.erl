@@ -11,7 +11,7 @@
 %%% @end
 %%% Created :  4 Jan 2011 by Eric Merritt <>
 %%%-------------------------------------------------------------------
--module(plists).
+-module(ewl_plists).
 
 -export([map/2,
          map/3,
@@ -54,9 +54,9 @@ filter(Fun, List, Timeout) ->
 run_list_fun_in_parallel(ListFun, Fun, List, Timeout) ->
     LocalPid = self(),
     Pids = lists:map(fun(I) ->
-                           spawn(fun() ->
-                                         wait(LocalPid, Fun, I, Timeout)
-                                 end)
+                           proc_lib:spawn(fun() ->
+                                                  wait(LocalPid, Fun, I, Timeout)
+                                          end)
                    end, List),
     gather(ListFun, Pids).
 
