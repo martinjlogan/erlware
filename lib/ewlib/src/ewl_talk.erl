@@ -1,34 +1,31 @@
-
-%%%-------------------------------------------------------------------
-%%% Copyright (c) 2006-2010 Erlware
+%% -*- mode: Erlang; fill-column: 79; comment-column: 70; -*-
+%%%---------------------------------------------------------------------------
+%%% Permission is hereby granted, free of charge, to any person
+%%% obtaining a copy of this software and associated documentation
+%%% files (the "Software"), to deal in the Software without
+%%% restriction, including without limitation the rights to use, copy,
+%%% modify, merge, publish, distribute, sublicense, and/or sell copies
+%%% of the Software, and to permit persons to whom the Software is
+%%% furnished to do so, subject to the following conditions:
 %%%
-%%% Permission is hereby granted, free of charge, to any
-%%% person obtaining a copy of this software and associated
-%%% documentation files (the "Software"), to deal in the
-%%% Software without restriction, including without limitation
-%%% the rights to use, copy, modify, merge, publish, distribute,
-%%% sublicense, and/or sell copies of the Software, and to permit
-%%% persons to whom the Software is furnished to do so, subject to
-%%% the following conditions:
-%%%
-%%% The above copyright notice and this permission notice shall
-%%% be included in all copies or substantial portions of the Software.
+%%% The above copyright notice and this permission notice shall be
+%%% included in all copies or substantial portions of the Software.
 %%%
 %%% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-%%% EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-%%% OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+%%% EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+%%% MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
 %%% NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
 %%% HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 %%% WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-%%% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-%%% OTHER DEALINGS IN THE SOFTWARE.
+%%% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+%%% DEALINGS IN THE SOFTWARE.
 %%%---------------------------------------------------------------------------
 %%% @author Eric Merritt
 %%% @doc
 %%%  Provides the ability to ask questions of the user and
 %%%  get a response.
 %%% @end
-%%% @copyright 2006-2010
+%%% @copyright Erlware 2006-2011
 %%%---------------------------------------------------------------------------
 -module(ewl_talk).
 
@@ -47,21 +44,19 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-%%====================================================================
+%%============================================================================
 %% Types
-%%====================================================================
+%%============================================================================
 -type prompt() :: string().
 -type type() :: boolean | number | string.
 -type supported() :: string() | boolean() | number().
 
-%%====================================================================
+%%============================================================================
 %% API
-%%====================================================================
-%%-------------------------------------------------------------------
+%%============================================================================
 %% @doc
 %%  Outputs the line to the screen
 %% @end
-%%-------------------------------------------------------------------
 -spec say(string()) -> ok.
 say(Say) ->
     io:format(lists:flatten([Say, "~n"])).
@@ -72,30 +67,24 @@ say(Say, Args) when is_list(Args) ->
 say(Say, Args) ->
     io:format(lists:flatten([Say, "~n"]), [Args]).
 
-%%-------------------------------------------------------------------
 %% @doc
 %%  Asks the user for a response to the specified prompt.
 %% @end
-%%-------------------------------------------------------------------
 -spec ask(prompt()) -> string().
 ask(Prompt) ->
     ask_convert(Prompt, fun get_string/1, string, none).
 
-%%-------------------------------------------------------------------
 %% @doc
 %%  Asks the user for a response to the specified prompt.
 %% @end
-%%-------------------------------------------------------------------
 -spec ask_default(prompt(), string()) -> string().
 ask_default(Prompt, Default) ->
     ask_convert(Prompt, fun get_string/1, string, Default).
 
-%%-------------------------------------------------------------------
 %% @doc
 %%  Asks the user to respond to the prompt. Trys to return the value
 %%  in the format specified by 'Type'.
 %% @end
-%%-------------------------------------------------------------------
 -spec ask(prompt(), type()) ->  supported().
 ask(Prompt, boolean) ->
     ask_convert(Prompt, fun get_boolean/1, boolean, none);
@@ -104,13 +93,10 @@ ask(Prompt, number) ->
 ask(Prompt, string) ->
     ask_convert(Prompt, fun get_integer/1, string, none).
 
-
-%%-------------------------------------------------------------------
 %% @doc
 %%  Asks the user to respond to the prompt. Trys to return the value
 %%  in the format specified by 'Type'.
 %% @end
-%%-------------------------------------------------------------------
 -spec ask_default(prompt(), type(), supported()) ->  supported().
 ask_default(Prompt, boolean, Default) ->
     ask_convert(Prompt, fun get_boolean/1, boolean, Default);
@@ -119,14 +105,10 @@ ask_default(Prompt, number, Default) ->
 ask_default(Prompt, string, Default) ->
     ask_convert(Prompt, fun get_integer/1, string, Default).
 
-
-
-%%-------------------------------------------------------------------
 %% @doc
 %%  Asks the user to respond to the number prompt with a value between
 %%  min and max.
 %% @end
-%%-------------------------------------------------------------------
 -spec ask(prompt(), number(), number()) -> number().
 ask(Prompt, Min, Max) ->
     Res = ask(Prompt, fun get_integer/1, none),
@@ -138,16 +120,13 @@ ask(Prompt, Min, Max) ->
             ask(Prompt, Min, Max)
     end.
 
-%%====================================================================
+%%============================================================================
 %% Internal functions
-%%====================================================================
-%%-------------------------------------------------------------------
+%%============================================================================
 %% @doc
 %%  Actually does the work of asking, checking result and translating
 %% result into the requested format.
 %% @end
-%% @private
-%%-------------------------------------------------------------------
 -spec ask_convert(prompt(), fun(), type(), supported()) -> supported().
 ask_convert(Prompt, TransFun, Type,  Default) ->
     NewPrompt = Prompt ++ case Default of
@@ -174,12 +153,9 @@ ask_convert(Prompt, TransFun, Type,  Default) ->
             Ret
     end.
 
-%%-------------------------------------------------------------------
 %% @doc
 %%  Trys to translate the result into a boolean
 %% @end
-%% @private
-%%-------------------------------------------------------------------
 -spec get_boolean(string()) -> true | false.
 get_boolean([]) ->
     no_data;
@@ -206,12 +182,9 @@ get_boolean([$N | _]) ->
 get_boolean(_) ->
     no_clue.
 
-%%-------------------------------------------------------------------
 %% @doc
 %%  Trys to translate the result into an integer
 %% @end
-%% @private
-%%-------------------------------------------------------------------
 -spec get_integer(string()) -> integer().
 get_integer([]) ->
     no_data;
@@ -223,12 +196,10 @@ get_integer(String) ->
             Integer
     end.
 
-%%-------------------------------------------------------------------
 %% @doc
 %%  Solely returns a string give the string. This is so the same
 %% translate function can be used across the board
 %% @end
-%%-------------------------------------------------------------------
 -spec get_string(string()) -> string().
 get_string([]) ->
     no_data;
