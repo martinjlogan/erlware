@@ -103,7 +103,7 @@ ask_default(Prompt, boolean, Default)  ->
 ask_default(Prompt, number, Default) ->
     ask_convert(Prompt, fun get_integer/1, number, Default);
 ask_default(Prompt, string, Default) ->
-    ask_convert(Prompt, fun get_integer/1, string, Default).
+    ask_convert(Prompt, fun get_string/1, string, Default).
 
 %% @doc
 %%  Asks the user to respond to the number prompt with a value between
@@ -145,7 +145,7 @@ ask_convert(Prompt, TransFun, Type,  Default) ->
 		    say("I didn't get that. This ~p kind of question.~n", [Type]),
 		    ask_convert(Prompt, TransFun, Type, Default);
 		Default ->
-		    Default
+		    TransFun(Default)
 	    end;
 	no_clue ->
             say("I didn't get that. This ~p kind of question.~n", [Type]),
