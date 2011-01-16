@@ -98,7 +98,7 @@ ask(Prompt, string) ->
 %%  in the format specified by 'Type'.
 %% @end
 -spec ask_default(prompt(), type(), supported()) ->  supported().
-ask_default(Prompt, boolean, Default) ->
+ask_default(Prompt, boolean, Default)  ->
     ask_convert(Prompt, fun get_boolean/1, boolean, Default);
 ask_default(Prompt, number, Default) ->
     ask_convert(Prompt, fun get_integer/1, number, Default);
@@ -110,7 +110,8 @@ ask_default(Prompt, string, Default) ->
 %%  min and max.
 %% @end
 -spec ask(prompt(), number(), number()) -> number().
-ask(Prompt, Min, Max) ->
+ask(Prompt, Min, Max)
+  when is_list(Prompt), is_number(Min), is_number(Max) ->
     Res = ask(Prompt, fun get_integer/1, none),
     case (Res >= Min andalso Res =< Max) of
         true ->
