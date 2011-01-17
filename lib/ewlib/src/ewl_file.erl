@@ -111,7 +111,7 @@ is_symlink(Path) ->
 	_ ->
 	    false
     end.
-    
+
 
 %%-------------------------------------------------------------------
 %% @doc return an md5 checksum string of a binary.
