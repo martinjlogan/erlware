@@ -110,7 +110,7 @@ copy_dir(From, To) ->
 	    end,
 	    lists:foreach(fun(ChildFrom) ->
 				  copy_dir(ChildFrom,
-					   lists:flatten([To, "/",
+					   filename:join([To,
 							  filename:basename(ChildFrom)]))
 			  end, filelib:wildcard(filename:join(From, "*")))
     end.
@@ -130,8 +130,8 @@ copy_file(From, To) ->
 -spec create_tmp_dir(Prefix::path()) ->
     {ok, TmpDirPath::path()} | {error, term()}.
 create_tmp_dir(Prefix) ->
-    TmpDirPath = lists:flatten([Prefix, "/.ewl_tmp-",
-				integer_to_list(element(3, now())), "/"]) ,
+    TmpDirPath = filename:join([Prefix, ".ewl_tmp-" ++
+				integer_to_list(element(3, now()))]) ,
     case mkdir_p(TmpDirPath) of
 	ok    -> {ok, TmpDirPath};
 	Error -> Error
@@ -155,12 +155,12 @@ make_tmp_dir() ->
 %% @doc Makes a directory including parent dirs if they are missing.
 -spec mkdir_p(path()) -> ok.
 mkdir_p(Path) ->
-    case erlang:system_info(system_architecture) of
-	"win32" ->
-	    filelib:ensure_dir(lists:flatten([filename:absname(Path), "\\"]));
-	_SysArch ->
-	    filelib:ensure_dir(lists:flatten([filename:absname(Path), "/"]))
-    end.
+    % We are exploiting a feature of ensuredir that that creates all
+    % directories up to the last element in the filename, then ignores
+    % that last element. This way we ensure that the dir is created
+    % and don't have any worries about path names
+    DirName = filename:join([filename:absname(Path), "tmp"]),
+    filelib:ensure_dir(DirName).
 
 %% @doc
 %% Compress a file or directory using the native os compression
