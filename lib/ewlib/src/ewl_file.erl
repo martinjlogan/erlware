@@ -26,6 +26,7 @@
 	 compress/3,
 	 uncompress/1,
 	 uncompress/2,
+	 replace_file_contents/3,
 	 gsub_file/3
 	]).
 
@@ -266,13 +267,13 @@ find([], _) ->
 find(FromDir, TargetPattern) ->
     case filelib:is_dir(FromDir) of
 	false ->
-	    case regexp:match(FromDir, TargetPattern) of
-		{match, _, _} -> [FromDir];
+	    case re:match(FromDir, TargetPattern) of
+		{match, _} -> [FromDir];
 		_             -> []
 	    end;
 	true ->
-	    FoundDir = case regexp:match(FromDir, TargetPattern) of
-		{match, _, _} -> [FromDir];
+	    FoundDir = case re:match(FromDir, TargetPattern) of
+		{match, _} -> [FromDir];
 		_             -> []
 	    end,
 	    List =
@@ -304,6 +305,7 @@ join_paths(Path1, Path2) ->
 					 ensure_leading_slash(Path2)])).
 
 
+%% @deprecated Please use the function {@link replace_file_contents}
 %% @doc
 %% alter the contents of a file with regexp:gsub.
 %% @end
@@ -320,6 +322,18 @@ gsub_file(FilePath, RegExp, New) ->
 	Error ->
 	    Error
     end.
+
+%% @doc
+%% alter the contents of a file with re:replace.
+%% @end
+-spec replace_file_contents(FilePath::path(), Re::string(), New::string()) -> ok.
+replace_file_contents(FilePath, RegExp, New) ->
+    {ok, BinaryContents} = file:read_file(FilePath),
+    Contents = binary_to_list(BinaryContents),
+    NewContents = re:replace(Contents, RegExp, New),
+    {ok, IOD} = file:open(FilePath, [write]),
+    ok = io:fwrite(IOD, "~s", [NewContents]).
+
 
 %%============================================================================
 %% Internal functions
