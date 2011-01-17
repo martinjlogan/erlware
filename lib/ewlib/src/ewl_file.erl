@@ -39,6 +39,8 @@
 	 md5/1,
 	 md5_checksum/1,
 	 delete_dir/1,
+	 remove/2,
+	 is_symlink/1,
 	 copy_dir/2,
 	 copy_file/2,
 	 create_tmp_dir/1,
@@ -61,31 +63,55 @@
 %%====================================================================
 
 %%--------------------------------------------------------------------
+%% @depricated 
 %% @doc delete a non empty directory.
 %% @spec delete_dir(Path) -> ok 
 %% @end
 %%--------------------------------------------------------------------
 delete_dir(Path) ->
+    remove(Path, [recursive]).
+
+%%--------------------------------------------------------------------
+%% @doc delete a file. Use the recursive option for directories.
+%% <pre>
+%% Example: remove("./tmp_dir", [recursive]).
+%% </pre>
+%% @end
+%%--------------------------------------------------------------------
+-spec remove(Path::string(), Options::list()) -> ok | {error, Reason::term()}.
+remove(Path, Options) ->
+    case lists:member(recursive, Options) of
+	false -> file:delete(Path);
+	true  -> remove_recursive(Path, Options)
+    end.
+
+remove_recursive(Path, Options) ->
     case filelib:is_dir(Path) of
 	false ->
-	    case filelib:is_file(Path) of
-		false -> 
-		    case file:read_link_info(Path) of
-			{ok, LinkInfo} ->
-			    %% XXX Exploiting the structure of a record, tisk, tisk, should probably include the proper .hrl file.
-			    symlink = element(3, LinkInfo),
-			    ok = file:delete(Path);
-			_ ->
-			    ok
-		    end;
-		true -> 
-		    ok = file:delete(Path)
-	    end;
+	    file:delete(Path);
 	true ->
-	    lists:foreach(fun(ChildPath) -> delete_dir(ChildPath) end, filelib:wildcard(filename:join(Path, "*"))),
+	    lists:foreach(fun(ChildPath) ->
+				  remove_recursive(ChildPath, Options)
+			  end, filelib:wildcard(filename:join(Path, "*"))),
 	    ok = file:del_dir(Path)
     end.
 
+%%-------------------------------------------------------------------
+%% @doc indicates witha boolean if the path supplied referes to
+%%      symlink.
+%% @end
+%%-------------------------------------------------------------------
+-spec is_symlink(Path::string()) -> bool().
+is_symlink(Path) ->
+    case catch file:read_link_info(Path) of
+	{ok, LinkInfo} ->
+	    % XXX Exploiting the structure of a record, tisk, tisk,
+	    % should probably include the proper .hrl file.
+	    symlink == element(3, LinkInfo);
+	_ ->
+	    false
+    end.
+    
 
 %%-------------------------------------------------------------------
 %% @doc return an md5 checksum string of a binary.
