@@ -267,12 +267,12 @@ find([], _) ->
 find(FromDir, TargetPattern) ->
     case filelib:is_dir(FromDir) of
 	false ->
-	    case re:match(FromDir, TargetPattern) of
+	    case re:run(FromDir, TargetPattern) of
 		{match, _} -> [FromDir];
 		_             -> []
 	    end;
 	true ->
-	    FoundDir = case re:match(FromDir, TargetPattern) of
+	    FoundDir = case re:run(FromDir, TargetPattern) of
 		{match, _} -> [FromDir];
 		_             -> []
 	    end,
@@ -432,3 +432,46 @@ remove_trailing_slash_test() ->
     ?assertMatch("/blah",  remove_trailing_slash("/blah")),
     ?assertMatch("blah",    remove_trailing_slash("blah")).
 
+
+setup_base_and_target() ->
+    {ok, BaseDir} = ewl_file:create_tmp_dir("/tmp"),
+    DummyContents = <<"This should be deleted">>,
+    SourceDir = filename:join([BaseDir, "source"]),
+    ok = file:make_dir(SourceDir),
+    Name1 = filename:join([SourceDir, "fileone"]),
+    Name2 = filename:join([SourceDir, "filetwo"]),
+    Name3 = filename:join([SourceDir, "filethree"]),
+    NoName = filename:join([SourceDir, "noname"]),
+
+    ok = file:write_file(Name1, DummyContents),
+    ok = file:write_file(Name2, DummyContents),
+    ok = file:write_file(Name3, DummyContents),
+    ok = file:write_file(NoName, DummyContents),
+    {BaseDir, SourceDir, {Name1, Name2, Name3, NoName}}.
+
+find_test() ->
+    % Create a directory in /tmp for the test. Clean everything afterwards
+
+    {setup,
+     fun setup_base_and_target/0,
+     fun ({BaseDir, _, _}) ->
+	     ewl_file:delete_dir(BaseDir)
+     end,
+     fun ({BaseDir, _, {Name1, Name2, Name3, _}}) ->
+	      ?assertMatch([Name2,
+			    Name3,
+			    Name1],
+			   ewl_file:find(BaseDir, "file[a-z]+\$"))
+      end}.
+
+replace_contents_test() ->
+    {setup,
+     fun setup_base_and_target/0,
+     fun ({BaseDir, _, _}) ->
+	     ewl_file:delete_dir(BaseDir)
+     end,
+     fun ({_, _, {Name1, _, _, _}}) ->
+	     ewl_file:replace_file_contents(Name1, "deleted\$", "CHANGED"),
+	     {ok, Contents} = file:read_file(Name1),
+	     ?assertMatch(<<"This should be CHANGED">>, Contents)
+     end}.
