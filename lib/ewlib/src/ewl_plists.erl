@@ -1,6 +1,5 @@
 %%%-------------------------------------------------------------------
-%%% @author Eric Merritt <>
-%%% @copyright (C) 2011, Eric Merritt
+%%% @author Eric Merritt 
 %%% @doc
 %%% simple parrallel map. Originally provided by Joe Armstrong
 %%% on the erlang questions mailing list.
@@ -8,8 +7,9 @@
 %%% Addition by Tristan: Added timeout to map and added filter
 %%% with timeout.
 %%%
+%%% Addition by Martin Logan: Added exception handling
+%%%
 %%% @end
-%%% Created :  4 Jan 2011 by Eric Merritt <>
 %%%-------------------------------------------------------------------
 -module(ewl_plists).
 
@@ -88,7 +88,20 @@ gather(filter, PidList) ->
 -spec map_gather([pid()]) -> [any()].
 map_gather([Pid | Rest]) ->
     receive
-        {Pid, Ret} -> [Ret|map_gather(Rest)]
+	% I am torn on the timeout. I am not sure it should be added
+	% into the return list. If a process does not return a value
+	% perhaps it should be excluded from the results. A map
+	% presumes a map across all elements. If one does not work
+	% adding in 'timeout' as a substitute is not strictly correct.
+	% There are two modes that seem valuable, asyncronous, excluding timeout
+	% or atomic/syncronous such that all operations must succeed to return
+	% an application level result or the whole operation fails. Take alook
+	% at filter, it treats timeout like false, which is not quite congruent
+	% with how map treats it. Why not treat timeout like true and include
+	% timeout in the list?
+        {Pid, {normal, Ret}} -> [Ret|map_gather(Rest)];
+        {Pid, {exception, {_Class, Ex}}} -> throw(Ex);
+        {Pid, timeout = Ret} -> [Ret|map_gather(Rest)]
     end;
 map_gather([]) ->
     [].
@@ -96,21 +109,27 @@ map_gather([]) ->
 -spec filter_gather([pid()]) -> [any()].
 filter_gather([Pid | Rest]) ->
     receive
-        {Pid, false} -> filter_gather(Rest);
-        {Pid, timeout} -> filter_gather(Rest);
-        {Pid, Ret} -> [Ret|filter_gather(Rest)]
+        {Pid, {normal, false}} -> filter_gather(Rest);
+        {Pid, {normal, Ret}} -> [Ret|filter_gather(Rest)];
+        {Pid, {exception, {_Class, Ex}}} -> throw(Ex);
+        {Pid, timeout} -> filter_gather(Rest)
     end;
 filter_gather([]) ->
     [].
 
--spec do_f(pid(), fun(), any())  -> none().
+-spec do_f(pid(), fun(), any())  -> no_return().
 do_f(Parent, F, I) ->
     try
         Result = F(I),
-        Parent ! {self(), Result}
+	% The protocol has the format {Parent::pid(), Result}
+	% where
+	%  Result = {ResultClass, Result} 
+	%   ResultClass = normal | exception
+	%   Result = term()
+        Parent ! {self(), {normal, Result}}
     catch
-        ErrType:Error ->
-            Parent ! {self(), {error, ErrType, Error}}
+        Class:Exception ->
+            Parent ! {self(), {exception, {Class, Exception}}}
     end.
 
 %%=============================================================================
@@ -151,13 +170,13 @@ pmap_timeout_test() ->
                  Results).
 
 pmap_bad_test() ->
-    Results = map(fun(_) ->
-                          erlang:throw(test_exception)
-                  end,
-                  lists:seq(1, 5), infinity),
-    ?assertMatch([{error, throw, test_exception},
-                  {error, throw, test_exception},
-                  {error, throw, test_exception},
-                  {error, throw, test_exception},
-                  {error, throw, test_exception}],
-                 Results).
+    Results =
+	try 
+	    map(fun(_) ->
+			erlang:throw(test_exception)
+		end,
+		lists:seq(1, 5), infinity)
+	catch
+	    C:E -> {C, E}
+	end,
+    ?assertMatch({throw, test_exception}, Results).
