@@ -17,6 +17,8 @@
 	 delete_dir/1,
 	 remove/2,
 	 is_symlink/1,
+	 copy/2,
+	 copy/3,
 	 copy_dir/2,
 	 copy_file/2,
 	 create_tmp_dir/1,
@@ -95,34 +97,46 @@ md5(Value) ->
     hex(binary_to_list(erlang:md5(Value))).
 
 
-%% @doc
-%% copy an entire directory to another location.
-%% @end
--spec copy_dir(path(), path()) -> ok.
-copy_dir(From, To) ->
+%% @doc copy an entire directory to another location.
+-spec copy(path(), path(), Options::list()) -> ok.
+copy(From, To, []) ->
+    copy(From, To);
+copy(From, To, [recursive]) ->
     case filelib:is_dir(From) of
 	false ->
-	    copy_file(From, To);
+	    copy(From, To);
 	true ->
-	    case filelib:is_dir(To) of
-		true  -> ok;
-		false -> ok = mkdir_p(To)
-	    end,
+	    make_dir_if_dir(To),
 	    lists:foreach(fun(ChildFrom) ->
-				  copy_dir(ChildFrom,
-					   filename:join([To,
-							  filename:basename(ChildFrom)]))
+				  ChildTo = filename:join([To, filename:basename(ChildFrom)]),
+				  copy(ChildFrom, ChildTo, [recursive])
 			  end, filelib:wildcard(filename:join(From, "*")))
     end.
 
-%% @doc
-%%  copy a file including timestamps,ownership and mode etc.
-%% @end
--spec copy_file(From::string(), To::string()) -> ok.
-copy_file(From, To) ->
+make_dir_if_dir(File) ->
+    case filelib:is_dir(File) of
+	true  -> ok;
+	false -> ok = mkdir_p(File)
+    end.
+
+%% @doc copy a file including timestamps,ownership and mode etc.
+-spec copy(From::string(), To::string()) -> ok.
+copy(From, To) ->
     {ok, _} = file:copy(From, To),
     {ok, FileInfo} = file:read_file_info(From),
     file:write_file_info(To, FileInfo).
+    
+%% @depricated Please use the function {@link copy} instead.
+%% @doc copy an entire directory to another location.
+-spec copy_dir(path(), path()) -> ok.
+copy_dir(From, To) ->
+    copy(From, To, [recursive]).
+
+%% @depricated Please use the function {@link copy} instead.
+%% @doc copy a file including timestamps,ownership and mode etc.
+-spec copy_file(From::string(), To::string()) -> ok.
+copy_file(From, To) ->
+    copy(From, To).
 
 
 %% @deprecated Please use the function {@link make_tmp_dir} instead.
@@ -411,7 +425,8 @@ get_base_dir(OptionsList) ->
 tmp() ->
     case erlang:system_info(system_architecture) of
 	"win32" ->
-	    throw(tmp_dir_not_supported_on_windows);
+	    % XXX TODO better tmp dir for windows perhaps :)
+	    "./tmp";
 	_SysArch ->
 	    "/tmp"
     end.
