@@ -48,7 +48,6 @@
 %% @end
 %%-------------------------------------------------------------------
 repo_get([$f,$i,$l,$e,$:,$/,$/|Repo] = FullRepo, Suffix, Timeout) ->
-    error_logger:info_msg("ewr_repo_dav:repo_get(~p, ~p, ~p)~n", [FullRepo, Suffix, Timeout]),
     FilePath = ewl_file:join_paths(Repo, Suffix),
     file:read_file(FilePath);
 repo_get([$h,$t,$t,$p,$:,$/,$/|_] = Repo, Suffix, Timeout) ->
@@ -186,16 +185,13 @@ handle_ibrowse_return(Result, AcceptableCodes) ->
 		true -> 
 		    {ok, Payload};
 		false ->
-		    error_logger:info_msg("ewr_repo_dav:handle_ibrowse_return/2 -> ~p~n", [Result]),
 		    {error, {http_return_code, Code}}
 	    end;
         Error = {error, _} -> 
-	    error_logger:info_msg("ewr_repo_dav:handle_ibrowse_return/2 -> ~p~n", [Result]),
 	    Error
     end.
     
 repo_get_with_auth(Repo, Suffix, Timeout, AuthOpts) ->
-    error_logger:info_msg("ewr_repo_dav:repo_get(~p, ~p, ~p)~n", [Repo, Suffix, Timeout]),
     URL = ewl_file:join_paths(Repo, Suffix),
     Res = ibrowse:send_req(URL, [], get, [], AuthOpts, Timeout),
     handle_ibrowse_return(Res, ["200"]).
@@ -204,7 +200,6 @@ repo_put_with_auth(Repo, Suffix, Payload, Timeout, AuthOpts) ->
     %% Creates the directory structure within the repo.
     repo_mkcol(Repo, filename:dirname(Suffix), Timeout),
     URL = ewl_file:join_paths(Repo, Suffix),
-    error_logger:info_msg("ewr_repo_dav:repo_put putting to ~p~n", [URL]),
     Res = (catch ibrowse:send_req(URL, [], put, Payload, AuthOpts, Timeout)),
     case handle_ibrowse_return(Res, ["200", "201"]) of
         {ok, _} -> {ok, URL};
@@ -215,7 +210,6 @@ repo_mkcol_with_auth(Repo, Suffix, Timeout, AuthOpts) ->
     (catch lists:foldl(fun(PathElement, Acc) -> 
                     NewAcc = Acc ++ PathElement ++ "/",
                     URL    = ewl_file:join_paths(Repo, NewAcc),
-                    error_logger:info_msg("mkcol  on ~p~n", [URL]),
                     %% In place for the build in logging
                     handle_ibrowse_return(
                         ibrowse:send_req(URL, [], mkcol, [], AuthOpts, Timeout),
@@ -229,7 +223,6 @@ get_auth_options(Repo) ->
         {ok, Terms} ->
             lookup_url(Repo, Terms);
         {error, Error} ->
-            error_logger:info_msg("Could not find auth options for repo~p (reason: ~p)~n", [Repo, Error]),
             []
     end.
 
@@ -247,23 +240,19 @@ lookup_url(URL, TermList) ->
         PropList when is_list(PropList) ->
             get_auth_for_url(URL, PropList);
         undefined ->
-            error_logger:info_msg("Missing faxien_secrets in secrets file for repo ~p~n", [URL]),
             [];
         _Other ->
-            error_logger:info_msg("Wrong format for faxien_secrets in secrets file for repo ~p: ~p~n", [URL, _Other]),
             []
     end.
 
 get_auth_for_url(URL, PropList) ->
     case [Tuple || {K, _} = Tuple <- PropList, lists:prefix(K, URL)] of
         [] = L ->
-            error_logger:info_msg("No auth options for repo ~p~n", [URL]),
             L;
         [{_K, AuthOpts}] ->
             check_ssl(AuthOpts),
             AuthOpts;
         [{_K, AuthOpts}|_] ->
-            error_logger:info_msg("More than one matching auth option for repo ~p, first one used~n", [URL]),
             check_ssl(AuthOpts),
             AuthOpts
     end.
@@ -271,7 +260,6 @@ get_auth_for_url(URL, PropList) ->
 home_dir() ->
     case os:getenv("HOME") of
         undefined ->
-            error_logger:info_msg("The HOME environment variable is not set~n"),
             "."; % Default to current dir
         Home ->
             Home
@@ -290,7 +278,6 @@ start_ssl() ->
         {error,{already_started,_}} ->
             ok;
         {error, Reason} = Error ->
-            error_logger:info_msg("Failed to start ssl, error:~n~p~n", [Reason]),
             Error;
         ok ->
             ssl:seed(term_to_binary(make_ref())),

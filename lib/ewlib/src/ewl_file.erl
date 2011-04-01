@@ -308,7 +308,7 @@ find(FromDir, TargetPattern) ->
 
 
 %% @doc
-%% Concatinate two parts of a path and make sure they join correctly.
+%% Concatinate two parts of a path regardless of if they have leading slashes.
 %% <pre>
 %% Example: join_paths("/usr/local/", "/lib/erlang/") -> "/usr/local/lib/erlang"
 %% </pre>
